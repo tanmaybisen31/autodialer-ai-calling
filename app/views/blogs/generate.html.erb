@@ -1,0 +1,249 @@
+<div class="row">
+  <div class="col-12">
+    <div class="mb-4">
+      <a href="<%= blogs_path %>" class="text-decoration-none">
+        <i class="fas fa-arrow-left"></i> Back to Blog
+      </a>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">
+        <h1 class="mb-0">
+          <i class="fas fa-magic"></i> AI Content Generator
+        </h1>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-4">
+          Type your article titles with details, and AI will automatically generate complete blog posts and add them to your site!
+        </p>
+
+        <div class="alert" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: var(--color-text);">
+          <h5><i class="fas fa-info-circle"></i> How to use:</h5>
+          <ul class="mb-0">
+            <li>List your article titles, one per line or numbered</li>
+            <li>Optionally add descriptions or context after each title</li>
+            <li>You can include tags (e.g., "Tags: rails, ruby, backend")</li>
+            <li>AI will parse your input and generate full articles automatically</li>
+          </ul>
+        </div>
+
+        <!-- Example Format -->
+        <div class="mb-4">
+          <label class="form-label"><strong>Example Format:</strong></label>
+          <div class="border rounded p-3" style="background: rgba(15, 23, 42, 0.75); font-family: 'Courier New', monospace; font-size: 0.9rem;">
+            <code style="color: var(--color-text);">
+1. Building RESTful APIs with Rails
+   Description: Guide to creating secure and scalable REST APIs
+   Tags: rails, api, rest
+
+2. React State Management Best Practices
+   Context: Cover useState, useReducer, and Context API
+   Tags: react, javascript, frontend
+
+3. Database Optimization Techniques
+   Focus on indexing, query optimization, and caching
+            </code>
+          </div>
+        </div>
+
+        <!-- Input Textarea -->
+        <div class="mb-4">
+          <label class="form-label"><strong>Enter Your Article Ideas:</strong></label>
+          <textarea
+            id="prompt-input"
+            class="form-control"
+            rows="12"
+            placeholder="Enter your article titles and details here...
+
+Example:
+1. Understanding Docker Containers
+   Description: Introduction to containerization with Docker
+   Tags: docker, devops
+
+2. JavaScript Async/Await Guide
+   Cover promises, async/await syntax, and error handling"
+            style="font-family: 'Inter', sans-serif; font-size: 1rem;"></textarea>
+          <small class="form-text text-muted mt-2">
+            <i class="fas fa-lightbulb"></i> Tip: Be specific with descriptions for better AI-generated content
+          </small>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-grid">
+          <button id="generate-button" class="btn btn-success btn-lg" onclick="generateArticles()">
+            <i class="fas fa-magic"></i> Generate & Create Blog Posts
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="card" style="display: none;">
+      <div class="card-body text-center py-5">
+        <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4>Generating articles with AI...</h4>
+        <p class="text-muted mb-0">
+          This may take a minute. Please wait while AI creates your content.
+        </p>
+        <div class="progress mt-3" style="height: 8px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Section -->
+    <div id="success-section" class="card" style="display: none;">
+      <div class="card-header bg-success text-white">
+        <h3 class="mb-0">
+          <i class="fas fa-check-circle"></i> Success!
+        </h3>
+      </div>
+      <div class="card-body">
+        <p id="success-message" class="mb-4"></p>
+
+        <h5 class="mb-3">
+          <i class="fas fa-list"></i> Created Articles:
+        </h5>
+        <div id="created-articles-list"></div>
+
+        <div id="failed-articles-section" style="display: none;">
+          <hr>
+          <h5 class="mb-3 text-warning">
+            <i class="fas fa-exclamation-triangle"></i> Failed Articles:
+          </h5>
+          <div id="failed-articles-list"></div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+          <a href="<%= blogs_path %>" class="btn btn-primary">
+            <i class="fas fa-list"></i> View All Blog Posts
+          </a>
+          <button class="btn btn-secondary" onclick="resetForm()">
+            <i class="fas fa-plus"></i> Generate More Articles
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Section -->
+    <div id="error-section" class="alert alert-danger" style="display: none;">
+      <h5><i class="fas fa-exclamation-triangle"></i> Error</h5>
+      <p id="error-message" class="mb-0"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function generateArticles() {
+    const prompt = document.getElementById('prompt-input').value.trim();
+
+    if (!prompt) {
+      alert('Please enter article titles and details');
+      return;
+    }
+
+    // Show loading, hide other sections
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('success-section').style.display = 'none';
+    document.getElementById('error-section').style.display = 'none';
+    document.getElementById('generate-button').disabled = true;
+
+    try {
+      const response = await fetch('<%= bulk_generate_blogs_path %>', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+          prompt: prompt
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Display success message
+        document.getElementById('success-message').innerHTML =
+          `<strong>${data.message}</strong><br>Total articles generated: ${data.total}`;
+
+        // Display created articles
+        const createdList = document.getElementById('created-articles-list');
+        createdList.innerHTML = data.created.map(article => `
+          <div class="card mb-2" style="background: rgba(22, 163, 74, 0.1); border: 1px solid rgba(22, 163, 74, 0.3);">
+            <div class="card-body py-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <span>
+                  <i class="fas fa-check-circle text-success"></i>
+                  <strong>${escapeHtml(article.title)}</strong>
+                </span>
+                <a href="${article.url}" class="btn btn-sm btn-primary">
+                  View <i class="fas fa-arrow-right"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        // Display failed articles if any
+        if (data.failed && data.failed.length > 0) {
+          document.getElementById('failed-articles-section').style.display = 'block';
+          const failedList = document.getElementById('failed-articles-list');
+          failedList.innerHTML = data.failed.map(article => `
+            <div class="card mb-2" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+              <div class="card-body py-2">
+                <strong>${escapeHtml(article.title)}</strong><br>
+                <small class="text-danger">${escapeHtml(article.errors.join(', '))}</small>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        document.getElementById('success-section').style.display = 'block';
+      } else {
+        // Show error
+        document.getElementById('error-message').textContent = data.error || 'Unknown error occurred';
+        document.getElementById('error-section').style.display = 'block';
+      }
+    } catch (error) {
+      document.getElementById('error-message').textContent = 'Failed to connect to server: ' + error.message;
+      document.getElementById('error-section').style.display = 'block';
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('generate-button').disabled = false;
+    }
+  }
+
+  function resetForm() {
+    document.getElementById('prompt-input').value = '';
+    document.getElementById('success-section').style.display = 'none';
+    document.getElementById('error-section').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Allow Ctrl+Enter to submit
+  document.getElementById('prompt-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      generateArticles();
+    }
+  });
+</script>
+
+<style>
+  code {
+    font-family: 'Courier New', monospace;
+  }
+
+  .progress {
+    background-color: rgba(15, 23, 42, 0.75);
+  }
+</style>

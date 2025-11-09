@@ -1,0 +1,432 @@
+Title: Test-Driven Development in Practice
+Tags: Testing, TDD, Best Practices, Quality
+
+# Test-Driven Development in Practice
+
+## Introduction
+
+Test-Driven Development (TDD) is a software development approach where you write tests before writing the actual code. This methodology has gained widespread adoption because it leads to better designed, more maintainable, and more reliable code.
+
+## The TDD Cycle: Red-Green-Refactor
+
+TDD follows a simple three-step cycle:
+
+### 1. Red: Write a Failing Test
+Write a test for the next bit of functionality you want to add. The test should fail because the functionality doesn't exist yet.
+
+### 2. Green: Make the Test Pass
+Write the minimal amount of code necessary to make the test pass. Don't worry about perfection yet.
+
+### 3. Refactor: Improve the Code
+Clean up the code while keeping all tests passing. Improve design, remove duplication, and enhance readability.
+
+## Example: Building a Calculator
+
+Let's walk through a complete TDD example building a simple calculator.
+
+### Step 1: Red - Write Failing Test
+
+```javascript
+// calculator.test.js
+describe('Calculator', () => {
+  test('adds two numbers', () => {
+    const calc = new Calculator();
+    expect(calc.add(2, 3)).toBe(5);
+  });
+});
+
+// Running this test fails: Calculator is not defined
+```
+
+### Step 2: Green - Make It Pass
+
+```javascript
+// calculator.js
+class Calculator {
+  add(a, b) {
+    return a + b;
+  }
+}
+
+module.exports = Calculator;
+
+// Test now passes! ✓
+```
+
+### Step 3: Refactor - Improve Code
+
+```javascript
+// Already clean, move to next feature
+```
+
+### Continue the Cycle
+
+```javascript
+// Test for subtraction
+test('subtracts two numbers', () => {
+  const calc = new Calculator();
+  expect(calc.subtract(5, 3)).toBe(2);
+});
+
+// Implement
+class Calculator {
+  add(a, b) {
+    return a + b;
+  }
+
+  subtract(a, b) {
+    return a - b;
+  }
+}
+```
+
+## Benefits of TDD
+
+### 1. Better Design
+Writing tests first forces you to think about the API and design before implementation. This leads to more modular, loosely coupled code.
+
+### 2. Documentation
+Tests serve as living documentation showing how code is intended to be used.
+
+### 3. Confidence in Changes
+With comprehensive tests, you can refactor fearlessly, knowing tests will catch any breaks.
+
+### 4. Fewer Bugs
+Bugs are caught early when they're cheaper to fix.
+
+### 5. Faster Debugging
+When a test fails, you know exactly what broke and where.
+
+## TDD Best Practices
+
+### 1. Write Small, Focused Tests
+
+```javascript
+// Good: Tests one thing
+test('returns empty array for no tasks', () => {
+  const list = new TodoList();
+  expect(list.getTasks()).toEqual([]);
+});
+
+// Bad: Tests multiple things
+test('todo list works', () => {
+  const list = new TodoList();
+  expect(list.getTasks()).toEqual([]);
+  list.addTask('Buy milk');
+  expect(list.getTasks()).toHaveLength(1);
+  list.removeTask(0);
+  expect(list.getTasks()).toEqual([]);
+});
+```
+
+### 2. Follow the AAA Pattern
+
+Arrange-Act-Assert structure makes tests clear:
+
+```javascript
+test('marks task as complete', () => {
+  // Arrange: Set up test data
+  const list = new TodoList();
+  list.addTask('Buy milk');
+
+  // Act: Perform the action
+  list.completeTask(0);
+
+  // Assert: Verify the result
+  expect(list.getTasks()[0].completed).toBe(true);
+});
+```
+
+### 3. Use Descriptive Test Names
+
+```javascript
+// Good
+test('returns 404 when user not found', () => {});
+test('sends welcome email after successful registration', () => {});
+
+// Bad
+test('test1', () => {});
+test('it works', () => {});
+```
+
+### 4. Test Behavior, Not Implementation
+
+```javascript
+// Good: Tests behavior
+test('user can login with valid credentials', () => {
+  const result = authService.login('user@test.com', 'password123');
+  expect(result.success).toBe(true);
+  expect(result.token).toBeDefined();
+});
+
+// Bad: Tests implementation details
+test('login hashes password with bcrypt', () => {
+  // This test breaks if you change from bcrypt to another hashing library
+});
+```
+
+### 5. Keep Tests Independent
+
+Each test should be able to run alone or in any order:
+
+```javascript
+// Good: Self-contained
+test('adds task to list', () => {
+  const list = new TodoList();
+  list.addTask('Buy milk');
+  expect(list.getTasks()).toHaveLength(1);
+});
+
+// Bad: Depends on previous test
+let sharedList = new TodoList();
+
+test('adds task', () => {
+  sharedList.addTask('Buy milk');
+});
+
+test('removes task', () => {
+  // Fails if previous test doesn't run first
+  sharedList.removeTask(0);
+});
+```
+
+## Common TDD Patterns
+
+### Pattern 1: Testing Edge Cases
+
+```javascript
+describe('divide', () => {
+  test('divides two numbers', () => {
+    expect(divide(10, 2)).toBe(5);
+  });
+
+  test('throws error when dividing by zero', () => {
+    expect(() => divide(10, 0)).toThrow('Cannot divide by zero');
+  });
+
+  test('handles negative numbers', () => {
+    expect(divide(-10, 2)).toBe(-5);
+  });
+
+  test('handles decimals', () => {
+    expect(divide(5, 2)).toBe(2.5);
+  });
+});
+```
+
+### Pattern 2: Testing Async Code
+
+```javascript
+test('fetches user data', async () => {
+  const user = await fetchUser(123);
+  expect(user.id).toBe(123);
+  expect(user.name).toBeDefined();
+});
+
+test('handles fetch errors', async () => {
+  await expect(fetchUser(999)).rejects.toThrow('User not found');
+});
+```
+
+### Pattern 3: Using Test Doubles
+
+```javascript
+// Mock external dependencies
+test('sends email after user registration', async () => {
+  const mockEmailService = {
+    send: jest.fn().mockResolvedValue({ sent: true })
+  };
+
+  const userService = new UserService(mockEmailService);
+  await userService.register('user@test.com', 'password');
+
+  expect(mockEmailService.send).toHaveBeenCalledWith({
+    to: 'user@test.com',
+    subject: 'Welcome!',
+    body: expect.any(String)
+  });
+});
+```
+
+## Testing Different Layers
+
+### Unit Tests
+
+Test individual functions or classes in isolation:
+
+```javascript
+describe('UserValidator', () => {
+  test('validates email format', () => {
+    expect(UserValidator.isValidEmail('test@example.com')).toBe(true);
+    expect(UserValidator.isValidEmail('invalid')).toBe(false);
+  });
+
+  test('requires password minimum length', () => {
+    expect(UserValidator.isValidPassword('abc')).toBe(false);
+    expect(UserValidator.isValidPassword('abcd1234')).toBe(true);
+  });
+});
+```
+
+### Integration Tests
+
+Test how components work together:
+
+```javascript
+describe('User Registration Flow', () => {
+  test('creates user and sends welcome email', async () => {
+    const db = await setupTestDatabase();
+    const emailService = new EmailService();
+    const userService = new UserService(db, emailService);
+
+    const result = await userService.register({
+      email: 'user@test.com',
+      password: 'password123'
+    });
+
+    expect(result.user.id).toBeDefined();
+    const user = await db.users.findById(result.user.id);
+    expect(user.email).toBe('user@test.com');
+  });
+});
+```
+
+### End-to-End Tests
+
+Test the entire application flow:
+
+```javascript
+describe('E2E: User Registration', () => {
+  test('user can register and login', async () => {
+    // Start application
+    const app = await startApp();
+
+    // Register
+    const response = await request(app)
+      .post('/api/register')
+      .send({ email: 'user@test.com', password: 'pass123' });
+    expect(response.status).toBe(201);
+
+    // Login
+    const loginResponse = await request(app)
+      .post('/api/login')
+      .send({ email: 'user@test.com', password: 'pass123' });
+    expect(loginResponse.status).toBe(200);
+    expect(loginResponse.body.token).toBeDefined();
+  });
+});
+```
+
+## Overcoming TDD Challenges
+
+### Challenge 1: "It Takes Too Long"
+
+**Reality**: Initial slowdown is temporary. TDD speeds up development over time by reducing debugging and preventing regressions.
+
+**Tip**: Start with critical business logic, not everything needs TDD.
+
+### Challenge 2: "How Do I Test This?"
+
+**Solution**: If something is hard to test, it's probably poorly designed. Use this as feedback to improve your design.
+
+### Challenge 3: "Tests Break When I Refactor"
+
+**Solution**: Test behavior, not implementation. Tests should care about what code does, not how it does it.
+
+### Challenge 4: "I Don't Know What to Test"
+
+**Solution**: Start with happy path, then add edge cases. Ask "What could go wrong?"
+
+## TDD Anti-Patterns to Avoid
+
+### 1. Testing Too Much
+
+Don't test framework code or libraries:
+
+```javascript
+// Bad: Testing React itself
+test('useState returns array', () => {
+  const [value, setValue] = useState(0);
+  expect(Array.isArray([value, setValue])).toBe(true);
+});
+```
+
+### 2. Slow Tests
+
+Keep tests fast by using in-memory databases and mocks:
+
+```javascript
+// Good: Fast in-memory database
+beforeEach(async () => {
+  db = await createInMemoryDatabase();
+});
+
+// Bad: Real database connection
+beforeEach(async () => {
+  db = await connectToProductionDatabase();
+});
+```
+
+### 3. Testing Private Methods
+
+Test public interfaces only:
+
+```javascript
+// Good: Test public API
+test('user service validates email', async () => {
+  await expect(userService.createUser({ email: 'invalid' }))
+    .rejects.toThrow('Invalid email');
+});
+
+// Bad: Testing internal implementation
+test('_validateEmail returns false for invalid emails', () => {
+  expect(userService._validateEmail('invalid')).toBe(false);
+});
+```
+
+## Real-World TDD Example
+
+Let's build a shopping cart with TDD:
+
+```javascript
+// Test 1: Empty cart
+test('new cart is empty', () => {
+  const cart = new ShoppingCart();
+  expect(cart.getItems()).toEqual([]);
+  expect(cart.getTotal()).toBe(0);
+});
+
+// Test 2: Add items
+test('can add items to cart', () => {
+  const cart = new ShoppingCart();
+  cart.addItem({ id: 1, name: 'Book', price: 10 });
+  expect(cart.getItems()).toHaveLength(1);
+});
+
+// Test 3: Calculate total
+test('calculates total price', () => {
+  const cart = new ShoppingCart();
+  cart.addItem({ id: 1, name: 'Book', price: 10 });
+  cart.addItem({ id: 2, name: 'Pen', price: 2 });
+  expect(cart.getTotal()).toBe(12);
+});
+
+// Test 4: Handle quantities
+test('tracks item quantities', () => {
+  const cart = new ShoppingCart();
+  cart.addItem({ id: 1, name: 'Book', price: 10 }, 2);
+  expect(cart.getTotal()).toBe(20);
+});
+
+// Test 5: Remove items
+test('can remove items', () => {
+  const cart = new ShoppingCart();
+  cart.addItem({ id: 1, name: 'Book', price: 10 });
+  cart.removeItem(1);
+  expect(cart.getItems()).toHaveLength(0);
+});
+```
+
+## Conclusion
+
+TDD is a powerful practice that leads to better code, fewer bugs, and more confidence in your software. While it requires discipline and practice, the benefits far outweigh the initial learning curve. Start small, focus on critical business logic, and gradually expand your TDD practice. Remember: Red, Green, Refactor - write a failing test, make it pass, then improve the code. With consistent practice, TDD becomes second nature and transforms how you approach software development.

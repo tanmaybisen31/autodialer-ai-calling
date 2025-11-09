@@ -1,0 +1,140 @@
+Title: Git Workflow Strategies for Teams
+Tags: Git, Version Control, Teamwork, DevOps
+
+# Git Workflow Strategies for Teams
+
+Git workflows define how teams collaborate using version control. The right workflow improves productivity, reduces conflicts, and makes collaboration smooth. This guide explores popular Git workflows and best practices.
+
+## Git Flow
+
+Git Flow is a branching model designed for projects with scheduled releases.
+
+### Branch Types:
+- master: Production-ready code
+- develop: Integration branch for features
+- feature/*: New features
+- release/*: Release preparation
+- hotfix/*: Emergency production fixes
+
+### Workflow:
+1. Create feature branch from develop
+2. Develop feature and commit changes
+3. Merge feature into develop
+4. Create release branch from develop
+5. Merge release into master and develop
+6. Tag master with version number
+
+Commands:
+```bash
+git checkout -b feature/user-auth develop
+# work on feature
+git checkout develop
+git merge --no-ff feature/user-auth
+git branch -d feature/user-auth
+```
+
+## GitHub Flow
+
+Simpler workflow ideal for continuous deployment.
+
+### Rules:
+- master is always deployable
+- Create descriptive branch names
+- Open pull request early
+- Deploy after review and CI pass
+- Merge to master after deployment
+
+### Workflow:
+1. Create branch from master
+2. Make commits
+3. Open pull request
+4. Discuss and review
+5. Deploy to test
+6. Merge to master
+7. Deploy to production
+
+Commands:
+```bash
+git checkout -b add-payment-feature master
+# make changes
+git push origin add-payment-feature
+# Create PR on GitHub
+# After review and approval
+git checkout master
+git merge add-payment-feature
+git push origin master
+```
+
+## Trunk-Based Development
+
+Developers work on short-lived branches or directly on master.
+
+### Principles:
+- Keep branches short-lived (< 2 days)
+- Integrate frequently
+- Use feature flags for incomplete work
+- Maintain high test coverage
+- Automate everything
+
+### Best For:
+- Teams with strong CI/CD
+- Mature testing practices
+- Small, frequent releases
+
+## Best Practices
+
+### 1. Commit Messages
+```bash
+# Good
+git commit -m "Add user authentication with JWT"
+git commit -m "Fix: Resolve memory leak in image processing"
+git commit -m "Refactor: Extract email service to separate module"
+
+# Bad
+git commit -m "update"
+git commit -m "fix bug"
+git commit -m "asdf"
+```
+
+### 2. Branch Naming
+```bash
+# Good
+feature/user-authentication
+bugfix/login-error
+hotfix/security-patch
+refactor/database-layer
+
+# Bad
+my-branch
+test
+new-feature
+```
+
+### 3. Pull Requests
+- Write clear descriptions
+- Keep changes focused
+- Request specific reviewers
+- Respond to feedback promptly
+- Keep PRs small (< 400 lines)
+
+### 4. Merge Strategies
+
+**Merge Commit** (preserves history):
+```bash
+git merge --no-ff feature-branch
+```
+
+**Squash and Merge** (clean history):
+```bash
+git merge --squash feature-branch
+git commit -m "Add complete user feature"
+```
+
+**Rebase** (linear history):
+```bash
+git rebase master
+```
+
+## Conclusion
+
+Choose a workflow that fits your team size, release cadence, and deployment practices. Start simple, adapt as needed, and always prioritize clear communication and collaboration.

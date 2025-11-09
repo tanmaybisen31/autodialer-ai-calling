@@ -1,0 +1,331 @@
+Title: Database Indexing Strategies for Performance
+Tags: Database, SQL, Performance, Optimization
+
+# Database Indexing Strategies for Performance
+
+## Introduction
+
+Database indexing is one of the most effective ways to improve query performance. An index is a data structure that improves the speed of data retrieval operations on a database table at the cost of additional writes and storage space.
+
+## How Indexes Work
+
+Think of a database index like a book's index. Instead of reading every page to find a topic, you look it up in the index, which tells you exactly which pages to read.
+
+### B-Tree Index Structure
+
+Most databases use B-Tree (Balanced Tree) indexes. A B-Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time.
+
+```
+           [50]
+          /    \
+    [25, 35]   [75, 90]
+    /  |  \     /  |  \
+  [10][30][40][60][80][95]
+```
+
+## Types of Indexes
+
+### 1. Primary Index (Clustered Index)
+
+The primary index determines the physical order of data in the table. Each table can have only one clustered index.
+
+```sql
+CREATE TABLE users (
+    id INT PRIMARY KEY,  -- Automatically creates clustered index
+    name VARCHAR(100),
+    email VARCHAR(100)
+);
+```
+
+### 2. Secondary Index (Non-Clustered Index)
+
+Secondary indexes create a separate structure that points to the actual data rows.
+
+```sql
+CREATE INDEX idx_users_email ON users(email);
+```
+
+### 3. Unique Index
+
+Ensures all values in the indexed column are unique.
+
+```sql
+CREATE UNIQUE INDEX idx_users_email_unique ON users(email);
+```
+
+### 4. Composite Index
+
+An index on multiple columns. Order matters!
+
+```sql
+CREATE INDEX idx_users_name_email ON users(name, email);
+```
+
+This index helps queries filtering by:
+- name only
+- name AND email
+
+But NOT email only (because name comes first).
+
+### 5. Partial Index
+
+Index only a subset of rows based on a condition (PostgreSQL).
+
+```sql
+CREATE INDEX idx_active_users ON users(email)
+WHERE status = 'active';
+```
+
+### 6. Full-Text Index
+
+Optimized for searching text content.
+
+```sql
+CREATE FULLTEXT INDEX idx_articles_content ON articles(title, body);
+
+-- Search using
+SELECT * FROM articles
+WHERE MATCH(title, body) AGAINST('database performance');
+```
+
+## When to Use Indexes
+
+### Good Candidates for Indexing:
+
+1. **Primary Keys**: Always indexed automatically
+2. **Foreign Keys**: Speed up joins
+3. **WHERE Clause Columns**: Frequently filtered columns
+4. **ORDER BY Columns**: Sorting is faster
+5. **JOIN Columns**: Makes joins efficient
+6. **Columns in GROUP BY**: Aggregations benefit
+
+### Example:
+```sql
+-- Without index: Full table scan
+SELECT * FROM orders WHERE customer_id = 123;
+
+-- With index on customer_id: Direct lookup
+CREATE INDEX idx_orders_customer ON orders(customer_id);
+```
+
+## When NOT to Use Indexes
+
+1. **Small Tables**: Full scan is faster
+2. **Frequently Updated Columns**: Index maintenance overhead
+3. **Columns with Low Cardinality**: e.g., boolean fields (unless partial index)
+4. **Columns Rarely Used in Queries**: Waste of space
+
+## Index Performance Strategies
+
+### 1. Use EXPLAIN to Analyze Queries
+
+```sql
+EXPLAIN SELECT * FROM users WHERE email = 'test@example.com';
+```
+
+Output shows:
+- Whether index is used
+- Type of scan (index scan vs. sequential scan)
+- Estimated cost
+
+### 2. Covering Indexes
+
+Include all columns needed by a query in the index:
+
+```sql
+-- Query needs id, name, email
+CREATE INDEX idx_users_covering ON users(email, name, id);
+
+SELECT id, name, email FROM users WHERE email = 'test@example.com';
+-- Index covers all needed columns, no table access required!
+```
+
+### 3. Index Column Order in Composite Indexes
+
+Put most selective columns first:
+
+```sql
+-- Good: country is more selective than active status
+CREATE INDEX idx_users_country_active ON users(country, is_active);
+
+-- Bad: is_active has low cardinality
+CREATE INDEX idx_users_active_country ON users(is_active, country);
+```
+
+### 4. Prefix Indexes (for Long Strings)
+
+Index only the first N characters:
+
+```sql
+CREATE INDEX idx_urls_prefix ON urls(url(50));
+```
+
+Saves space but still accelerates lookups.
+
+## Common Indexing Patterns
+
+### Pattern 1: Optimizing WHERE Clauses
+
+```sql
+-- Slow without index
+SELECT * FROM orders
+WHERE customer_id = 123
+  AND order_date >= '2024-01-01';
+
+-- Fast with composite index
+CREATE INDEX idx_orders_customer_date
+ON orders(customer_id, order_date);
+```
+
+### Pattern 2: Optimizing Joins
+
+```sql
+-- Slow: No indexes on join columns
+SELECT u.name, o.total
+FROM users u
+JOIN orders o ON u.id = o.user_id;
+
+-- Fast: Index foreign key
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+```
+
+### Pattern 3: Optimizing Sorting
+
+```sql
+-- Slow: Sorts all rows
+SELECT * FROM products ORDER BY price DESC LIMIT 10;
+
+-- Fast: Index on price
+CREATE INDEX idx_products_price ON products(price DESC);
+```
+
+### Pattern 4: Optimizing Aggregations
+
+```sql
+-- Slow: Groups without index
+SELECT category, COUNT(*)
+FROM products
+GROUP BY category;
+
+-- Fast: Index on category
+CREATE INDEX idx_products_category ON products(category);
+```
+
+## Index Maintenance
+
+### Rebuilding Indexes
+
+Over time, indexes can become fragmented. Rebuild them periodically:
+
+```sql
+-- PostgreSQL
+REINDEX TABLE users;
+
+-- MySQL
+ALTER TABLE users ENGINE=InnoDB;
+
+-- SQL Server
+ALTER INDEX idx_users_email ON users REBUILD;
+```
+
+### Monitoring Index Usage
+
+```sql
+-- PostgreSQL: Find unused indexes
+SELECT schemaname, tablename, indexname
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0 AND indexname NOT LIKE 'pg_toast%';
+
+-- MySQL: Check index statistics
+SHOW INDEX FROM users;
+```
+
+### Removing Unused Indexes
+
+```sql
+DROP INDEX idx_unused ON users;
+```
+
+## Real-World Example
+
+Let's optimize a slow query:
+
+```sql
+-- Slow query (1.2 seconds)
+SELECT u.name, COUNT(o.id) as order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.country = 'USA'
+  AND u.created_at >= '2024-01-01'
+  AND o.status = 'completed'
+GROUP BY u.id, u.name
+ORDER BY order_count DESC
+LIMIT 10;
+
+-- Solution: Add strategic indexes
+CREATE INDEX idx_users_country_created ON users(country, created_at);
+CREATE INDEX idx_orders_user_status ON orders(user_id, status);
+CREATE INDEX idx_orders_status ON orders(status);
+
+-- Result: 0.05 seconds (24x faster!)
+```
+
+## Best Practices
+
+### 1. Index Selectivity
+Create indexes on columns with high selectivity (many unique values).
+
+### 2. Avoid Over-Indexing
+Each index adds overhead for INSERT, UPDATE, DELETE operations.
+
+### 3. Use Composite Indexes Wisely
+Order columns by selectivity and query patterns.
+
+### 4. Monitor and Measure
+Use EXPLAIN and query profiling tools regularly.
+
+### 5. Consider Index Size
+Indexes consume disk space. Balance performance gains against storage costs.
+
+### 6. Keep Statistics Updated
+Database optimizers rely on statistics. Update them regularly:
+
+```sql
+-- PostgreSQL
+ANALYZE users;
+
+-- MySQL
+ANALYZE TABLE users;
+```
+
+## Advanced Techniques
+
+### Partial Indexes for Specific Queries
+
+```sql
+-- Index only active premium users
+CREATE INDEX idx_premium_active_users
+ON users(email)
+WHERE status = 'active' AND plan = 'premium';
+```
+
+### Expression Indexes
+
+```sql
+-- Index on computed values
+CREATE INDEX idx_users_lower_email ON users(LOWER(email));
+
+SELECT * FROM users WHERE LOWER(email) = 'test@example.com';
+```
+
+### Bitmap Indexes (Oracle)
+
+Ideal for columns with low cardinality:
+
+```sql
+CREATE BITMAP INDEX idx_users_status ON users(status);
+```
+
+## Conclusion
+
+Effective indexing is crucial for database performance. Start by identifying slow queries, use EXPLAIN to understand query execution, and strategically add indexes. Remember that indexes are not free - they cost storage space and slow down writes. The key is finding the right balance between read performance and write overhead. Regular monitoring and maintenance ensure your indexes continue to provide optimal performance as your data grows.

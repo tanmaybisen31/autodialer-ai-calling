@@ -1,0 +1,113 @@
+<div class="row">
+  <div class="col-12">
+    <div class="mb-4">
+      <a href="<%= blogs_path %>" class="text-decoration-none">
+        <i class="fas fa-arrow-left"></i> Back to Blog
+      </a>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="mb-3">
+          <i class="fas fa-search"></i> Semantic Search
+        </h2>
+        <p class="text-muted mb-4">
+          Search articles using natural language. Our AI-powered RAG system uses cosine similarity to find the most relevant articles.
+        </p>
+
+        <%= form_with url: search_blogs_path, method: :get, local: true do |f| %>
+          <div class="input-group input-group-lg">
+            <%= f.text_field :q,
+                class: 'form-control',
+                placeholder: 'Try: "How to optimize database performance" or "React state management patterns"',
+                value: @query,
+                autofocus: true %>
+            <%= f.submit 'Search', class: 'btn btn-primary' %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @query.present? %>
+      <% if @blogs.any? %>
+        <div class="alert" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: var(--color-text);">
+          <i class="fas fa-info-circle"></i>
+          Found <strong><%= @blogs.count %></strong> articles with similarity score ≥ 0.3 for query: "<strong><%= @query %></strong>"
+        </div>
+
+        <div class="row">
+          <% @blogs.each do |blog| %>
+            <div class="col-12 mb-4">
+              <div class="card">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h3 class="card-title mb-0">
+                      <a href="<%= blog_path(blog) %>" style="color: var(--color-primary);">
+                        <%= blog.title %>
+                      </a>
+                    </h3>
+                    <% if @similarity_scores[blog.id] %>
+                      <span class="badge bg-success" style="font-size: 0.9rem;">
+                        <i class="fas fa-percent"></i> <%= (@similarity_scores[blog.id] * 100).round(1) %> match
+                      </span>
+                    <% end %>
+                  </div>
+
+                  <div class="mb-3">
+                    <small class="text-muted">
+                      <i class="fas fa-calendar"></i>
+                      <%= blog.published_at.strftime('%B %d, %Y') %>
+                      <% if @similarity_scores[blog.id] %>
+                        <span class="ms-3">
+                          <i class="fas fa-chart-line"></i>
+                          Cosine Similarity: <%= @similarity_scores[blog.id] %>
+                        </span>
+                      <% end %>
+                    </small>
+                  </div>
+
+                  <% if blog.tags.present? %>
+                    <div class="mb-3">
+                      <% blog.tags_array.each do |tag| %>
+                        <span class="badge bg-info me-1">
+                          <%= tag %>
+                        </span>
+                      <% end %>
+                    </div>
+                  <% end %>
+
+                  <div class="article-preview">
+                    <%= truncate(strip_tags(blog.content), length: 300) %>
+                  </div>
+
+                  <a href="<%= blog_path(blog) %>" class="btn btn-primary btn-sm mt-3">
+                    Read More <i class="fas fa-arrow-right"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <i class="fas fa-search fa-4x mb-3" style="color: var(--color-muted);"></i>
+            <h3>No similar articles found</h3>
+            <p class="text-muted">
+              Try a different search query or lower the similarity threshold.
+              <br>
+              Current minimum similarity: 0.3 (30% match)
+            </p>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .article-preview {
+    line-height: 1.8;
+    color: var(--color-text);
+  }
+</style>

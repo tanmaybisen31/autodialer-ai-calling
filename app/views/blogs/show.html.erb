@@ -1,0 +1,142 @@
+<div class="row">
+  <div class="col-12">
+    <div class="mb-4">
+      <a href="<%= blogs_path %>" class="text-decoration-none">
+        <i class="fas fa-arrow-left"></i> Back to Blog
+      </a>
+    </div>
+
+    <article class="card">
+      <div class="card-body p-4">
+        <h1 class="mb-3"><%= @blog.title %></h1>
+
+        <div class="mb-4">
+          <small class="text-muted">
+            <i class="fas fa-calendar"></i>
+            <%= @blog.published_at.strftime('%B %d, %Y at %I:%M %p') %>
+          </small>
+        </div>
+
+        <% if @blog.tags.present? %>
+          <div class="mb-4">
+            <% @blog.tags_array.each do |tag| %>
+              <span class="badge bg-info me-1">
+                <%= tag %>
+              </span>
+            <% end %>
+          </div>
+        <% end %>
+
+        <div class="article-content">
+          <%= @rendered_content %>
+        </div>
+      </div>
+    </article>
+
+    <% if @related_articles.present? %>
+      <div class="card mt-4">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-lightbulb"></i> Related Articles
+            <small class="text-muted">(powered by RAG + Cosine Similarity)</small>
+          </h3>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-4">
+            These articles are semantically similar to the current article, found using AI embeddings and cosine similarity.
+          </p>
+          <div class="list-group">
+            <% @related_articles.each do |related| %>
+              <a href="<%= blog_path(related[:article]) %>" class="list-group-item list-group-item-action" style="background-color: rgba(15, 23, 42, 0.75); border: 1px solid rgba(148, 163, 184, 0.18); color: var(--color-text); margin-bottom: 0.5rem; border-radius: 8px;">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h5 class="mb-1" style="color: var(--color-primary);">
+                      <%= related[:article].title %>
+                    </h5>
+                    <% if related[:article].tags.present? %>
+                      <div class="mt-2">
+                        <% related[:article].tags_array.take(3).each do |tag| %>
+                          <span class="badge bg-info me-1" style="font-size: 0.7rem;">
+                            <%= tag %>
+                          </span>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                  <span class="badge bg-success">
+                    <%= (related[:score] * 100).round(1) %>% match
+                  </span>
+                </div>
+              </a>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .article-content {
+    line-height: 1.8;
+    font-size: 1.05rem;
+  }
+
+  .article-content h2 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+    font-size: 1.75rem;
+  }
+
+  .article-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.4rem;
+  }
+
+  .article-content p {
+    margin-bottom: 1.25rem;
+  }
+
+  .article-content pre {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+
+  .article-content code {
+    background: rgba(56, 189, 248, 0.15);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: var(--color-primary);
+  }
+
+  .article-content pre code {
+    background: transparent;
+    padding: 0;
+    color: var(--color-text);
+  }
+
+  .article-content ul, .article-content ol {
+    margin-bottom: 1.25rem;
+    padding-left: 2rem;
+  }
+
+  .article-content li {
+    margin-bottom: 0.5rem;
+  }
+
+  .article-content blockquote {
+    border-left: 4px solid var(--color-primary);
+    padding-left: 1.5rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: var(--color-muted);
+  }
+</style>

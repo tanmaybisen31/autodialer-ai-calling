@@ -1,0 +1,13 @@
+default: &default
+  account_sid: <%= ENV.fetch('TWILIO_ACCOUNT_SID', 'your_account_sid_here') %>
+  auth_token: <%= ENV.fetch('TWILIO_AUTH_TOKEN', 'your_auth_token_here') %>
+  phone_number: <%= ENV.fetch('TWILIO_PHONE_NUMBER', 'your_phone_number_here') %>
+
+development:
+  <<: *default
+
+production:
+  <<: *default
+
+test:
+  <<: *default

@@ -1,0 +1,383 @@
+Title: React Hooks: A Deep Dive
+Tags: React, JavaScript, Frontend, Hooks
+
+# React Hooks: A Deep Dive
+
+## Introduction
+
+React Hooks, introduced in React 16.8, revolutionized how we write React components. Hooks allow you to use state and other React features in functional components, eliminating the need for class components in most cases.
+
+## Why Hooks?
+
+Before Hooks, developers faced several challenges:
+- Complex components with logic scattered across lifecycle methods
+- Difficulty reusing stateful logic between components
+- Confusing class syntax with `this` keyword
+- Wrapper hell from higher-order components and render props
+
+Hooks solve these problems by:
+- Organizing logic by concern, not lifecycle
+- Making it easy to extract and reuse stateful logic
+- Using simple function syntax
+- Avoiding wrapper components
+
+## Basic Hooks
+
+### useState
+
+`useState` adds state to functional components.
+
+Basic usage:
+```javascript
+import { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+    </div>
+  );
+}
+```
+
+Multiple state variables:
+```javascript
+function UserForm() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [age, setAge] = useState(0);
+
+  // ...
+}
+```
+
+State with objects:
+```javascript
+function UserProfile() {
+  const [user, setUser] = useState({
+    name: '',
+    email: '',
+    age: 0
+  });
+
+  const updateName = (newName) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      name: newName
+    }));
+  };
+}
+```
+
+### useEffect
+
+`useEffect` handles side effects in functional components, replacing lifecycle methods like `componentDidMount`, `componentDidUpdate`, and `componentWillUnmount`.
+
+Basic usage:
+```javascript
+import { useEffect } from 'react';
+
+function DataFetcher() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    fetch('https://api.example.com/data')
+      .then(res => res.json())
+      .then(setData);
+  }, []); // Empty array = run once on mount
+
+  return <div>{data ? JSON.stringify(data) : 'Loading...'}</div>;
+}
+```
+
+Effect with dependencies:
+```javascript
+function SearchResults({ query }) {
+  const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    if (query) {
+      fetchResults(query).then(setResults);
+    }
+  }, [query]); // Re-run when query changes
+
+  return <ul>{results.map(r => <li key={r.id}>{r.name}</li>)}</ul>;
+}
+```
+
+Cleanup function:
+```javascript
+function Timer() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSeconds(s => s + 1);
+    }, 1000);
+
+    // Cleanup function
+    return () => clearInterval(interval);
+  }, []);
+
+  return <div>Elapsed: {seconds}s</div>;
+}
+```
+
+### useContext
+
+`useContext` accesses context values without wrapping components in Context.Consumer.
+
+Creating and using context:
+```javascript
+import { createContext, useContext, useState } from 'react';
+
+const ThemeContext = createContext();
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+function ThemedButton() {
+  const { theme, setTheme } = useContext(ThemeContext);
+
+  return (
+    <button
+      style={{ background: theme === 'dark' ? '#333' : '#fff' }}
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+    >
+      Toggle Theme
+    </button>
+  );
+}
+```
+
+## Advanced Hooks
+
+### useReducer
+
+`useReducer` is an alternative to `useState` for complex state logic.
+
+```javascript
+import { useReducer } from 'react';
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'increment':
+      return { count: state.count + 1 };
+    case 'decrement':
+      return { count: state.count - 1 };
+    case 'reset':
+      return { count: 0 };
+    default:
+      return state;
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, { count: 0 });
+
+  return (
+    <div>
+      <p>Count: {state.count}</p>
+      <button onClick={() => dispatch({ type: 'increment' })}>+</button>
+      <button onClick={() => dispatch({ type: 'decrement' })}>-</button>
+      <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+    </div>
+  );
+}
+```
+
+### useMemo
+
+`useMemo` memoizes expensive computations to avoid unnecessary recalculations.
+
+```javascript
+import { useMemo } from 'react';
+
+function ExpensiveComponent({ items, filter }) {
+  const filteredItems = useMemo(() => {
+    console.log('Filtering items...');
+    return items.filter(item => item.includes(filter));
+  }, [items, filter]); // Only recalculate when these change
+
+  return (
+    <ul>
+      {filteredItems.map(item => <li key={item}>{item}</li>)}
+    </ul>
+  );
+}
+```
+
+### useCallback
+
+`useCallback` memoizes functions to prevent unnecessary re-renders of child components.
+
+```javascript
+import { useCallback } from 'react';
+
+function Parent() {
+  const [count, setCount] = useState(0);
+
+  const handleClick = useCallback(() => {
+    console.log('Button clicked');
+  }, []); // Function reference stays the same
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(c => c + 1)}>Increment</button>
+      <Child onClick={handleClick} />
+    </div>
+  );
+}
+```
+
+### useRef
+
+`useRef` creates a mutable reference that persists across renders.
+
+Accessing DOM elements:
+```javascript
+import { useRef } from 'react';
+
+function TextInput() {
+  const inputRef = useRef(null);
+
+  const focusInput = () => {
+    inputRef.current.focus();
+  };
+
+  return (
+    <div>
+      <input ref={inputRef} type="text" />
+      <button onClick={focusInput}>Focus Input</button>
+    </div>
+  );
+}
+```
+
+Storing mutable values:
+```javascript
+function Timer() {
+  const [count, setCount] = useState(0);
+  const intervalRef = useRef(null);
+
+  const startTimer = () => {
+    intervalRef.current = setInterval(() => {
+      setCount(c => c + 1);
+    }, 1000);
+  };
+
+  const stopTimer = () => {
+    clearInterval(intervalRef.current);
+  };
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={startTimer}>Start</button>
+      <button onClick={stopTimer}>Stop</button>
+    </div>
+  );
+}
+```
+
+## Custom Hooks
+
+Custom Hooks let you extract component logic into reusable functions.
+
+### Example: useFetch
+```javascript
+function useFetch(url) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(url)
+      .then(res => res.json())
+      .then(setData)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [url]);
+
+  return { data, loading, error };
+}
+
+// Usage
+function UserProfile({ userId }) {
+  const { data, loading, error } = useFetch(`/api/users/${userId}`);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  return <div>{data.name}</div>;
+}
+```
+
+### Example: useLocalStorage
+```javascript
+function useLocalStorage(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : initialValue;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue];
+}
+
+// Usage
+function Settings() {
+  const [theme, setTheme] = useLocalStorage('theme', 'light');
+
+  return (
+    <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+      Current: {theme}
+    </button>
+  );
+}
+```
+
+## Rules of Hooks
+
+1. **Only call Hooks at the top level**: Don't call Hooks inside loops, conditions, or nested functions.
+
+2. **Only call Hooks from React functions**: Call Hooks from functional components or custom Hooks, not regular JavaScript functions.
+
+These rules ensure Hooks work correctly and maintain state consistently.
+
+## Best Practices
+
+### 1. Extract Logic into Custom Hooks
+When logic is reused, create custom Hooks.
+
+### 2. Use useCallback for Expensive Functions
+Prevent unnecessary re-renders by memoizing callback functions.
+
+### 3. Use useMemo for Expensive Calculations
+Optimize performance by memoizing computed values.
+
+### 4. Keep Effects Focused
+Each useEffect should handle one concern.
+
+### 5. Include All Dependencies
+Always include all values used inside effects in the dependency array.
+
+## Conclusion
+
+React Hooks have transformed React development, making code more reusable, readable, and maintainable. By understanding and properly using Hooks, you can write cleaner, more efficient React applications. Start with useState and useEffect, then explore advanced Hooks and create custom Hooks to build powerful, reusable logic for your applications.

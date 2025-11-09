@@ -1,0 +1,157 @@
+Title: Understanding RESTful API Design Principles
+Tags: API, REST, Web Development, Backend
+
+# Understanding RESTful API Design Principles
+
+## Introduction
+
+REST (Representational State Transfer) is an architectural style for designing networked applications. It relies on a stateless, client-server protocol, almost always HTTP. RESTful applications use HTTP requests to perform CRUD (Create, Read, Update, Delete) operations on resources.
+
+## Core Principles of REST
+
+### 1. Client-Server Architecture
+
+The client and server are separate entities that communicate over a network. This separation allows them to evolve independently. The client is responsible for the user interface, while the server manages data storage and business logic.
+
+### 2. Statelessness
+
+Each request from client to server must contain all information needed to understand and process the request. The server should not store any client context between requests. This makes the system more scalable and reliable.
+
+### 3. Cacheability
+
+Responses must define themselves as cacheable or non-cacheable. If a response is cacheable, the client can reuse the response data for equivalent requests later, improving performance.
+
+### 4. Uniform Interface
+
+REST is defined by four interface constraints:
+- Resource identification in requests
+- Resource manipulation through representations
+- Self-descriptive messages
+- Hypermedia as the engine of application state (HATEOAS)
+
+### 5. Layered System
+
+A client cannot ordinarily tell whether it is connected directly to the end server or an intermediary. This allows for load balancing, shared caches, and security policies.
+
+## HTTP Methods in REST
+
+### GET
+Retrieve a resource or collection of resources. GET requests should be safe and idempotent (calling them multiple times produces the same result).
+
+Example:
+```
+GET /api/users          # Get all users
+GET /api/users/123      # Get user with ID 123
+```
+
+### POST
+Create a new resource. POST is not idempotent - calling it multiple times creates multiple resources.
+
+Example:
+```
+POST /api/users
+Body: {"name": "John", "email": "john@example.com"}
+```
+
+### PUT
+Update an existing resource completely. PUT is idempotent - calling it multiple times with the same data produces the same result.
+
+Example:
+```
+PUT /api/users/123
+Body: {"name": "John Doe", "email": "john.doe@example.com"}
+```
+
+### PATCH
+Partially update a resource. PATCH is used when you only want to update specific fields.
+
+Example:
+```
+PATCH /api/users/123
+Body: {"email": "newemail@example.com"}
+```
+
+### DELETE
+Remove a resource. DELETE is idempotent.
+
+Example:
+```
+DELETE /api/users/123
+```
+
+## Best Practices
+
+### 1. Use Nouns for Resources
+URLs should represent resources (nouns), not actions (verbs).
+
+Good: `/api/users`, `/api/products`
+Bad: `/api/getUsers`, `/api/createProduct`
+
+### 2. Use HTTP Status Codes Properly
+
+- 200 OK: Successful GET, PUT, PATCH
+- 201 Created: Successful POST
+- 204 No Content: Successful DELETE
+- 400 Bad Request: Invalid request data
+- 401 Unauthorized: Authentication required
+- 403 Forbidden: Authenticated but not authorized
+- 404 Not Found: Resource doesn't exist
+- 500 Internal Server Error: Server error
+
+### 3. Version Your API
+
+Include version in the URL to allow for backward compatibility:
+```
+/api/v1/users
+/api/v2/users
+```
+
+### 4. Use Query Parameters for Filtering
+
+```
+GET /api/users?role=admin&status=active
+GET /api/products?category=electronics&price_lt=1000
+```
+
+### 5. Implement Pagination
+
+For large collections, use pagination:
+```
+GET /api/users?page=2&limit=20
+```
+
+### 6. Provide Clear Error Messages
+
+Return structured error responses:
+```json
+{
+  "error": {
+    "code": "INVALID_EMAIL",
+    "message": "The email address is not valid",
+    "field": "email"
+  }
+}
+```
+
+## Security Considerations
+
+### Authentication
+Use token-based authentication (JWT, OAuth 2.0) instead of basic authentication.
+
+### HTTPS
+Always use HTTPS in production to encrypt data in transit.
+
+### Rate Limiting
+Implement rate limiting to prevent abuse:
+```
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1640000000
+```
+
+### Input Validation
+Validate all input data to prevent SQL injection, XSS, and other attacks.
+
+## Conclusion
+
+RESTful API design is about creating intuitive, scalable, and maintainable interfaces. By following these principles and best practices, you can build APIs that are easy to understand, use, and evolve over time. Remember that REST is an architectural style, not a strict standard, so adapt these principles to your specific needs while maintaining consistency.

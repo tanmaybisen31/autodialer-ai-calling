@@ -1,0 +1,204 @@
+Title: Understanding Asynchronous JavaScript
+Tags: JavaScript, Async, Promises, Node.js
+
+# Understanding Asynchronous JavaScript
+
+JavaScript is single-threaded but can handle asynchronous operations efficiently. Understanding async patterns is crucial for modern JavaScript development.
+
+## The Event Loop
+
+JavaScript uses an event loop to handle asynchronous operations:
+
+1. **Call Stack**: Executes synchronous code
+2. **Web APIs**: Handle async operations (setTimeout, fetch)
+3. **Callback Queue**: Holds completed async callbacks
+4. **Event Loop**: Moves callbacks from queue to stack
+
+Example:
+```javascript
+console.log('1');
+setTimeout(() => console.log('2'), 0);
+console.log('3');
+// Output: 1, 3, 2
+```
+
+## Callbacks
+
+Traditional way to handle async operations:
+
+```javascript
+function fetchUser(id, callback) {
+  setTimeout(() => {
+    callback({ id: id, name: 'John' });
+  }, 1000);
+}
+
+fetchUser(1, (user) => {
+  console.log(user);
+});
+```
+
+### Callback Hell
+Nested callbacks become hard to read:
+
+```javascript
+getData(function(a) {
+  getMoreData(a, function(b) {
+    getMoreData(b, function(c) {
+      getMoreData(c, function(d) {
+        console.log(d);
+      });
+    });
+  });
+});
+```
+
+## Promises
+
+Promises provide cleaner async handling:
+
+```javascript
+function fetchUser(id) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve({ id: id, name: 'John' });
+    }, 1000);
+  });
+}
+
+fetchUser(1)
+  .then(user => console.log(user))
+  .catch(error => console.error(error));
+```
+
+### Promise Chaining
+```javascript
+fetchUser(1)
+  .then(user => fetchOrders(user.id))
+  .then(orders => processOrders(orders))
+  .then(result => console.log(result))
+  .catch(error => console.error(error));
+```
+
+### Promise Methods
+```javascript
+// Run in parallel, wait for all
+Promise.all([promise1, promise2, promise3])
+  .then(results => console.log(results));
+
+// Race - first one wins
+Promise.race([promise1, promise2])
+  .then(result => console.log(result));
+
+// All settled - wait for all, even failures
+Promise.allSettled([promise1, promise2])
+  .then(results => console.log(results));
+```
+
+## Async/Await
+
+Modern syntax for handling promises:
+
+```javascript
+async function getUser() {
+  try {
+    const user = await fetchUser(1);
+    const orders = await fetchOrders(user.id);
+    return orders;
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+```
+
+### Benefits:
+- Reads like synchronous code
+- Better error handling with try/catch
+- Easier debugging
+- Cleaner code
+
+### Parallel Execution
+```javascript
+// Sequential (slow)
+const user = await fetchUser(1);
+const posts = await fetchPosts(1);
+
+// Parallel (fast)
+const [user, posts] = await Promise.all([
+  fetchUser(1),
+  fetchPosts(1)
+]);
+```
+
+## Error Handling
+
+### Try/Catch
+```javascript
+async function getData() {
+  try {
+    const data = await fetchData();
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch:', error);
+    throw error;
+  }
+}
+```
+
+### Promise catch
+```javascript
+fetchData()
+  .then(data => process(data))
+  .catch(error => console.error(error))
+  .finally(() => console.log('Done'));
+```
+
+## Common Patterns
+
+### Retry Logic
+```javascript
+async function fetchWithRetry(url, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fetch(url);
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await wait(1000 * Math.pow(2, i));
+    }
+  }
+}
+```
+
+### Timeout
+```javascript
+function timeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), ms)
+    )
+  ]);
+}
+
+await timeout(fetchData(), 5000);
+```
+
+### Debounce
+```javascript
+function debounce(func, delay) {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
+const search = debounce(async (query) => {
+  const results = await fetch(`/api/search?q=${query}`);
+  return results.json();
+}, 300);
+```
+
+## Conclusion
+
+Asynchronous JavaScript is fundamental to modern web development. Promises and async/await provide powerful, readable ways to handle async operations. Master these patterns to write efficient, maintainable JavaScript code.

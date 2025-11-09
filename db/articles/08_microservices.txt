@@ -1,0 +1,355 @@
+Title: Microservices Architecture Patterns
+Tags: Microservices, Architecture, Backend, Scalability
+
+# Microservices Architecture Patterns
+
+Microservices architecture structures an application as a collection of loosely coupled, independently deployable services. Each service handles a specific business capability.
+
+## Microservices vs Monolith
+
+### Monolithic Architecture:
+- Single codebase
+- Single deployment unit
+- Tight coupling
+- Scales as one unit
+
+### Microservices Architecture:
+- Multiple independent services
+- Independent deployment
+- Loose coupling
+- Scales independently
+
+## Core Principles
+
+### 1. Single Responsibility
+Each service focuses on one business capability:
+- User Service: Authentication, user management
+- Order Service: Order processing
+- Payment Service: Payment handling
+- Inventory Service: Stock management
+
+### 2. Decentralized Data Management
+Each service owns its database:
+
+```
+User Service → User DB
+Order Service → Order DB
+Payment Service → Payment DB
+```
+
+No shared databases between services.
+
+### 3. Independent Deployment
+Services can be deployed independently without affecting others.
+
+### 4. API Gateway
+Single entry point for all client requests:
+
+```
+Client → API Gateway → Services
+```
+
+Benefits:
+- Authentication/authorization
+- Request routing
+- Rate limiting
+- Response aggregation
+
+## Communication Patterns
+
+### Synchronous (REST/HTTP)
+```javascript
+// Order Service calls Payment Service
+const response = await fetch('http://payment-service/api/process', {
+  method: 'POST',
+  body: JSON.stringify({
+    orderId: order.id,
+    amount: order.total
+  })
+});
+```
+
+**Pros**: Simple, direct
+**Cons**: Tight coupling, cascading failures
+
+### Asynchronous (Message Queue)
+```javascript
+// Order Service publishes event
+messageQueue.publish('order.created', {
+  orderId: order.id,
+  customerId: order.customerId,
+  total: order.total
+});
+
+// Payment Service subscribes
+messageQueue.subscribe('order.created', async (order) => {
+  await processPayment(order);
+});
+```
+
+**Pros**: Loose coupling, resilience
+**Cons**: Eventual consistency, complexity
+
+## Design Patterns
+
+### 1. API Gateway Pattern
+Provides unified API for clients:
+
+```javascript
+// API Gateway
+app.get('/api/user/:id/orders', async (req, res) => {
+  const user = await userService.getUser(req.params.id);
+  const orders = await orderService.getUserOrders(req.params.id);
+  res.json({ user, orders });
+});
+```
+
+### 2. Service Discovery
+Services register and discover each other dynamically:
+
+```javascript
+// Register service
+serviceRegistry.register({
+  name: 'order-service',
+  host: 'localhost',
+  port: 3001
+});
+
+// Discover service
+const orderService = serviceRegistry.discover('order-service');
+```
+
+Tools: Consul, Eureka, etcd
+
+### 3. Circuit Breaker
+Prevents cascading failures:
+
+```javascript
+class CircuitBreaker {
+  constructor(service, threshold = 5) {
+    this.service = service;
+    this.failureCount = 0;
+    this.threshold = threshold;
+    this.state = 'CLOSED';
+  }
+
+  async call() {
+    if (this.state === 'OPEN') {
+      throw new Error('Circuit breaker is OPEN');
+    }
+
+    try {
+      const result = await this.service();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  onSuccess() {
+    this.failureCount = 0;
+  }
+
+  onFailure() {
+    this.failureCount++;
+    if (this.failureCount >= this.threshold) {
+      this.state = 'OPEN';
+      setTimeout(() => this.state = 'HALF_OPEN', 60000);
+    }
+  }
+}
+```
+
+### 4. Saga Pattern
+Manages distributed transactions:
+
+```javascript
+// Order Saga Orchestrator
+async function createOrder(orderData) {
+  try {
+    // Step 1: Create order
+    const order = await orderService.create(orderData);
+
+    // Step 2: Reserve inventory
+    await inventoryService.reserve(order.items);
+
+    // Step 3: Process payment
+    await paymentService.charge(order.total);
+
+    // Step 4: Confirm order
+    await orderService.confirm(order.id);
+
+    return order;
+  } catch (error) {
+    // Compensating transactions
+    await inventoryService.release(order.items);
+    await orderService.cancel(order.id);
+    throw error;
+  }
+}
+```
+
+### 5. Event Sourcing
+Store all changes as events:
+
+```javascript
+const events = [
+  { type: 'OrderCreated', data: { orderId: 1, items: [...] } },
+  { type: 'PaymentProcessed', data: { orderId: 1, amount: 100 } },
+  { type: 'OrderShipped', data: { orderId: 1, trackingId: 'ABC123' } }
+];
+
+// Rebuild state by replaying events
+function getOrderState(orderId) {
+  return events
+    .filter(e => e.data.orderId === orderId)
+    .reduce((state, event) => applyEvent(state, event), {});
+}
+```
+
+## Data Management
+
+### Database Per Service
+Each service has its own database schema.
+
+### Shared Database (Anti-pattern)
+Avoid sharing databases between services.
+
+### CQRS (Command Query Responsibility Segregation)
+Separate read and write models:
+
+```javascript
+// Write Model
+class OrderCommandHandler {
+  async createOrder(command) {
+    const order = new Order(command);
+    await orderRepository.save(order);
+    await eventBus.publish('OrderCreated', order);
+  }
+}
+
+// Read Model
+class OrderQueryHandler {
+  async getOrders(customerId) {
+    return await orderReadModel.findByCustomer(customerId);
+  }
+}
+```
+
+## Deployment Strategies
+
+### Containerization
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### Orchestration (Kubernetes)
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: order-service:1.0
+        ports:
+        - containerPort: 3000
+```
+
+## Monitoring and Observability
+
+### Distributed Tracing
+Track requests across services:
+
+```javascript
+const tracer = require('opentracing');
+
+app.get('/api/orders', async (req, res) => {
+  const span = tracer.startSpan('get_orders');
+
+  const orders = await orderService.getOrders();
+
+  span.finish();
+  res.json(orders);
+});
+```
+
+### Centralized Logging
+Aggregate logs from all services:
+
+```javascript
+logger.info('Order created', {
+  serviceId: 'order-service',
+  orderId: order.id,
+  customerId: order.customerId,
+  traceId: req.traceId
+});
+```
+
+### Health Checks
+```javascript
+app.get('/health', async (req, res) => {
+  const checks = {
+    database: await checkDatabase(),
+    cache: await checkCache(),
+    messageQueue: await checkMessageQueue()
+  };
+
+  const healthy = Object.values(checks).every(c => c.healthy);
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'healthy' : 'unhealthy',
+    checks
+  });
+});
+```
+
+## Best Practices
+
+1. **Start with a Monolith**: Don't begin with microservices for small projects
+2. **Define Clear Boundaries**: Each service should have a clear responsibility
+3. **Automate Everything**: CI/CD, testing, deployment
+4. **Monitor Continuously**: Logs, metrics, traces
+5. **Plan for Failure**: Circuit breakers, retries, fallbacks
+6. **Version APIs**: Maintain backward compatibility
+7. **Secure Communication**: Use TLS, API authentication
+8. **Document APIs**: OpenAPI/Swagger specifications
+
+## Challenges
+
+### Distributed System Complexity
+More moving parts, harder to debug.
+
+### Data Consistency
+No ACID transactions across services.
+
+### Network Latency
+Inter-service communication adds latency.
+
+### Deployment Complexity
+Need robust CI/CD and orchestration.
+
+### Testing Complexity
+Integration testing across services is challenging.
+
+## Conclusion
+
+Microservices architecture offers scalability, flexibility, and resilience but comes with increased complexity. Success requires strong DevOps practices, proper tooling, and careful design. Consider starting with a modular monolith and evolving to microservices as your needs grow. Focus on clear service boundaries, robust communication patterns, and comprehensive monitoring to build reliable, scalable microservices systems.

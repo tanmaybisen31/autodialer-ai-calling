@@ -1,0 +1,541 @@
+Title: Introduction to GraphQL
+Tags: GraphQL, API, Backend, Web Development
+
+# Introduction to GraphQL
+
+GraphQL is a query language and runtime for APIs that provides a complete description of data and enables clients to request exactly what they need.
+
+## Why GraphQL?
+
+### REST API Problems:
+- Over-fetching (getting more data than needed)
+- Under-fetching (making multiple requests)
+- Fixed endpoints (rigid structure)
+- API versioning complexity
+
+### GraphQL Solutions:
+- Clients request only needed fields
+- Single request for multiple resources
+- Flexible queries
+- No versioning needed (schema evolution)
+
+## Core Concepts
+
+### Schema
+
+GraphQL APIs are built around a schema defining types and operations.
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  posts: [Post!]!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  author: User!
+  published: Boolean!
+}
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+  post(id: ID!): Post
+  posts: [Post!]!
+}
+
+type Mutation {
+  createUser(name: String!, email: String!): User!
+  updateUser(id: ID!, name: String, email: String): User!
+  deleteUser(id: ID!): Boolean!
+  createPost(title: String!, content: String!, authorId: ID!): Post!
+}
+```
+
+### Types
+
+**Scalar Types**:
+- Int: Signed 32‐bit integer
+- Float: Signed double-precision decimal
+- String: UTF-8 character sequence
+- Boolean: true or false
+- ID: Unique identifier
+
+**Object Types**:
+```graphql
+type User {
+  id: ID!
+  name: String!
+  email: String!
+}
+```
+
+**List Types**:
+```graphql
+type Query {
+  users: [User!]!  # Non-null list of non-null Users
+}
+```
+
+**Non-Null Types** (exclamation mark):
+```graphql
+name: String!  # Required field
+```
+
+## Queries
+
+Request specific data:
+
+```graphql
+query {
+  user(id: "1") {
+    id
+    name
+    email
+    posts {
+      id
+      title
+    }
+  }
+}
+```
+
+Response:
+```json
+{
+  "data": {
+    "user": {
+      "id": "1",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "posts": [
+        { "id": "1", "title": "First Post" },
+        { "id": "2", "title": "Second Post" }
+      ]
+    }
+  }
+}
+```
+
+### Query Variables
+
+```graphql
+query GetUser($userId: ID!) {
+  user(id: $userId) {
+    name
+    email
+  }
+}
+```
+
+Variables:
+```json
+{
+  "userId": "1"
+}
+```
+
+### Query Aliases
+
+```graphql
+query {
+  user1: user(id: "1") {
+    name
+  }
+  user2: user(id: "2") {
+    name
+  }
+}
+```
+
+### Fragments
+
+Reusable pieces of queries:
+
+```graphql
+fragment UserFields on User {
+  id
+  name
+  email
+}
+
+query {
+  user(id: "1") {
+    ...UserFields
+    posts {
+      title
+    }
+  }
+}
+```
+
+## Mutations
+
+Modify server data:
+
+```graphql
+mutation {
+  createUser(name: "Jane Doe", email: "jane@example.com") {
+    id
+    name
+    email
+  }
+}
+```
+
+Response:
+```json
+{
+  "data": {
+    "createUser": {
+      "id": "3",
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    }
+  }
+}
+```
+
+### Multiple Mutations
+
+```graphql
+mutation {
+  user1: createUser(name: "Alice", email: "alice@example.com") {
+    id
+  }
+  user2: createUser(name: "Bob", email: "bob@example.com") {
+    id
+  }
+}
+```
+
+## Resolvers
+
+Functions that return data for schema fields:
+
+```javascript
+const resolvers = {
+  Query: {
+    user: (parent, args, context) => {
+      return getUserById(args.id);
+    },
+    users: (parent, args, context) => {
+      return getAllUsers();
+    }
+  },
+  Mutation: {
+    createUser: (parent, args, context) => {
+      return createUser(args.name, args.email);
+    }
+  },
+  User: {
+    posts: (parent, args, context) => {
+      return getPostsByUserId(parent.id);
+    }
+  }
+};
+```
+
+## Setting Up GraphQL Server
+
+### Using Apollo Server (Node.js)
+
+```javascript
+const { ApolloServer, gql } = require('apollo-server');
+
+// Schema
+const typeDefs = gql`
+  type User {
+    id: ID!
+    name: String!
+    email: String!
+  }
+
+  type Query {
+    users: [User!]!
+    user(id: ID!): User
+  }
+
+  type Mutation {
+    createUser(name: String!, email: String!): User!
+  }
+`;
+
+// Resolvers
+const resolvers = {
+  Query: {
+    users: () => users,
+    user: (_, { id }) => users.find(u => u.id === id)
+  },
+  Mutation: {
+    createUser: (_, { name, email }) => {
+      const user = { id: String(users.length + 1), name, email };
+      users.push(user);
+      return user;
+    }
+  }
+};
+
+// Server
+const server = new ApolloServer({ typeDefs, resolvers });
+
+server.listen().then(({ url }) => {
+  console.log(`Server ready at ${url}`);
+});
+```
+
+## GraphQL Client
+
+### Using Apollo Client (React)
+
+```javascript
+import { ApolloClient, InMemoryCache, ApolloProvider, useQuery, gql } from '@apollo/client';
+
+// Client setup
+const client = new ApolloClient({
+  uri: 'http://localhost:4000',
+  cache: new InMemoryCache()
+});
+
+// Wrap app
+function App() {
+  return (
+    <ApolloProvider client={client}>
+      <Users />
+    </ApolloProvider>
+  );
+}
+
+// Query component
+const GET_USERS = gql`
+  query GetUsers {
+    users {
+      id
+      name
+      email
+    }
+  }
+`;
+
+function Users() {
+  const { loading, error, data } = useQuery(GET_USERS);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <ul>
+      {data.users.map(user => (
+        <li key={user.id}>
+          {user.name} - {user.email}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Mutations in React
+
+```javascript
+import { useMutation, gql } from '@apollo/client';
+
+const CREATE_USER = gql`
+  mutation CreateUser($name: String!, $email: String!) {
+    createUser(name: $name, email: $email) {
+      id
+      name
+      email
+    }
+  }
+`;
+
+function CreateUserForm() {
+  const [createUser, { data, loading, error }] = useMutation(CREATE_USER);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    createUser({
+      variables: {
+        name: e.target.name.value,
+        email: e.target.email.value
+      }
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="name" placeholder="Name" required />
+      <input name="email" type="email" placeholder="Email" required />
+      <button type="submit" disabled={loading}>
+        Create User
+      </button>
+    </form>
+  );
+}
+```
+
+## Advanced Features
+
+### Subscriptions
+
+Real-time updates:
+
+```graphql
+type Subscription {
+  postCreated: Post!
+}
+```
+
+```javascript
+subscription {
+  postCreated {
+    id
+    title
+    author {
+      name
+    }
+  }
+}
+```
+
+### Directives
+
+Modify query execution:
+
+```graphql
+query GetUser($withPosts: Boolean!) {
+  user(id: "1") {
+    name
+    posts @include(if: $withPosts) {
+      title
+    }
+  }
+}
+```
+
+Common directives:
+- @include(if: Boolean): Include field if true
+- @skip(if: Boolean): Skip field if true
+- @deprecated(reason: String): Mark field as deprecated
+
+### Error Handling
+
+```json
+{
+  "errors": [
+    {
+      "message": "User not found",
+      "locations": [{ "line": 2, "column": 3 }],
+      "path": ["user"],
+      "extensions": {
+        "code": "NOT_FOUND"
+      }
+    }
+  ],
+  "data": {
+    "user": null
+  }
+}
+```
+
+## Best Practices
+
+### 1. Design Schema Carefully
+Think about data relationships and future requirements.
+
+### 2. Use DataLoader for Batching
+Prevent N+1 query problems:
+
+```javascript
+const DataLoader = require('dataloader');
+
+const userLoader = new DataLoader(async (ids) => {
+  const users = await getUsersByIds(ids);
+  return ids.map(id => users.find(u => u.id === id));
+});
+```
+
+### 3. Implement Pagination
+
+```graphql
+type Query {
+  posts(first: Int, after: String): PostConnection!
+}
+
+type PostConnection {
+  edges: [PostEdge!]!
+  pageInfo: PageInfo!
+}
+
+type PostEdge {
+  node: Post!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+```
+
+### 4. Authentication & Authorization
+
+```javascript
+const resolvers = {
+  Query: {
+    user: (parent, args, context) => {
+      if (!context.user) {
+        throw new Error('Not authenticated');
+      }
+      return getUserById(args.id);
+    }
+  }
+};
+```
+
+### 5. Query Complexity Limits
+
+```javascript
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  plugins: [
+    {
+      requestDidStart() {
+        return {
+          didResolveOperation({ request, document }) {
+            const complexity = calculateComplexity(document);
+            if (complexity > 1000) {
+              throw new Error('Query too complex');
+            }
+          }
+        };
+      }
+    }
+  ]
+});
+```
+
+## GraphQL vs REST
+
+### GraphQL Advantages:
+- Flexible queries
+- Single endpoint
+- Strong typing
+- No over-fetching
+- Real-time with subscriptions
+
+### REST Advantages:
+- Simpler caching
+- Familiar to most developers
+- Better for file uploads
+- Easier to implement
+
+## Conclusion
+
+GraphQL provides a powerful, flexible alternative to REST APIs. With its strong typing, single endpoint, and precise data fetching, GraphQL solves many common API problems. While it has a learning curve, the benefits in developer experience and application performance make it worthwhile for many projects. Start with simple queries and mutations, then explore advanced features like subscriptions and custom directives as your needs grow.

@@ -1,0 +1,272 @@
+Title: Introduction to Docker and Containerization
+Tags: Docker, DevOps, Containers, Deployment
+
+# Introduction to Docker and Containerization
+
+## What is Docker?
+
+Docker is a platform that enables developers to package applications and their dependencies into lightweight, portable containers. These containers can run consistently across different computing environments, solving the classic "it works on my machine" problem.
+
+## Understanding Containers
+
+### Containers vs Virtual Machines
+
+Containers virtualize the operating system, while virtual machines virtualize hardware. This makes containers:
+- Much lighter (MBs vs GBs)
+- Faster to start (seconds vs minutes)
+- More efficient (can run hundreds on one host)
+- More portable (same container runs anywhere)
+
+### Container Benefits
+
+1. **Consistency**: Same environment in development, testing, and production
+2. **Isolation**: Applications run independently without conflicts
+3. **Efficiency**: Share OS kernel, use minimal resources
+4. **Portability**: Run on any system with Docker installed
+5. **Scalability**: Easy to replicate and distribute
+
+## Docker Architecture
+
+### Docker Engine
+The core component that runs and manages containers. It consists of:
+- **Docker Daemon**: Background service managing containers
+- **Docker Client**: CLI tool to interact with daemon
+- **REST API**: Interface between client and daemon
+
+### Docker Images
+Read-only templates used to create containers. Images are built from a Dockerfile and stored in registries.
+
+### Docker Containers
+Running instances of Docker images. Containers are lightweight, standalone, and executable packages.
+
+### Docker Registry
+Storage and distribution system for Docker images. Docker Hub is the default public registry.
+
+## Core Docker Concepts
+
+### Dockerfile
+
+A Dockerfile is a text file containing instructions to build a Docker image.
+
+Example Dockerfile:
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+Instructions explained:
+- **FROM**: Base image to use
+- **WORKDIR**: Set working directory
+- **COPY**: Copy files from host to container
+- **RUN**: Execute commands during build
+- **EXPOSE**: Document which port to expose
+- **CMD**: Default command to run container
+
+### Docker Images
+
+Build an image:
+```bash
+docker build -t myapp:1.0 .
+```
+
+List images:
+```bash
+docker images
+```
+
+Remove image:
+```bash
+docker rmi myapp:1.0
+```
+
+Pull image from registry:
+```bash
+docker pull nginx:latest
+```
+
+### Docker Containers
+
+Run a container:
+```bash
+docker run -d -p 8080:80 --name webserver nginx
+```
+
+Flags explained:
+- **-d**: Run in detached mode (background)
+- **-p**: Map host port to container port
+- **--name**: Assign name to container
+
+List running containers:
+```bash
+docker ps
+```
+
+List all containers (including stopped):
+```bash
+docker ps -a
+```
+
+Stop container:
+```bash
+docker stop webserver
+```
+
+Start container:
+```bash
+docker start webserver
+```
+
+Remove container:
+```bash
+docker rm webserver
+```
+
+Execute command in running container:
+```bash
+docker exec -it webserver bash
+```
+
+View container logs:
+```bash
+docker logs webserver
+```
+
+## Docker Volumes
+
+Volumes persist data outside containers and survive container restarts.
+
+Create volume:
+```bash
+docker volume create mydata
+```
+
+Run container with volume:
+```bash
+docker run -v mydata:/app/data myapp
+```
+
+## Docker Networks
+
+Docker networks enable containers to communicate with each other.
+
+Create network:
+```bash
+docker network create mynetwork
+```
+
+Run container on network:
+```bash
+docker run --network mynetwork myapp
+```
+
+## Docker Compose
+
+Docker Compose allows you to define and run multi-container applications using a YAML file.
+
+Example docker-compose.yml:
+```yaml
+version: '3.8'
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./app:/app
+    environment:
+      - NODE_ENV=production
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_PASSWORD=secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+Common Docker Compose commands:
+```bash
+docker-compose up -d        # Start services
+docker-compose down         # Stop services
+docker-compose logs         # View logs
+docker-compose ps           # List services
+```
+
+## Best Practices
+
+### 1. Use Official Images
+Start with official images from Docker Hub when possible.
+
+### 2. Minimize Image Layers
+Combine RUN commands to reduce layers:
+```dockerfile
+RUN apt-get update && apt-get install -y \
+    package1 \
+    package2 \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+### 3. Use .dockerignore
+Exclude unnecessary files from build context:
+```
+node_modules
+.git
+*.log
+```
+
+### 4. Use Multi-Stage Builds
+Reduce final image size:
+```dockerfile
+FROM node:18 AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+CMD ["node", "dist/server.js"]
+```
+
+### 5. Run as Non-Root User
+```dockerfile
+RUN adduser -D appuser
+USER appuser
+```
+
+### 6. Use Health Checks
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost/ || exit 1
+```
+
+## Common Use Cases
+
+### Development Environment
+Quickly spin up databases, caches, and services without installation:
+```bash
+docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=pass postgres
+docker run -d -p 6379:6379 redis
+```
+
+### Microservices
+Package each service as a container for independent deployment and scaling.
+
+### CI/CD Pipelines
+Build, test, and deploy applications in consistent environments.
+
+### Application Deployment
+Deploy applications with all dependencies included, ensuring consistency.
+
+## Conclusion
+
+Docker has revolutionized application deployment by providing a consistent, portable, and efficient way to package and run applications. By understanding Docker fundamentals and following best practices, you can streamline your development workflow and deployment processes. Whether you're developing locally, running CI/CD pipelines, or deploying to production, Docker provides the tools and flexibility you need.

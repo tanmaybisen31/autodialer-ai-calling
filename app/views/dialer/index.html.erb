@@ -1,0 +1,304 @@
+<div class="row">
+  <!-- Header -->
+  <div class="col-12">
+    <h1 class="mb-4">
+      <i class="fas fa-phone-volume"></i> Autodialer Control Panel
+    </h1>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="col-md-3">
+    <div class="card stat-card stat-card--info">
+      <h3><%= @stats[:total_phone_numbers] %></h3>
+      <p>Total Numbers</p>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card stat-card stat-card--warning">
+      <h3><%= @stats[:pending] %></h3>
+      <p>Pending Calls</p>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card stat-card stat-card--success">
+      <h3><%= @stats[:successful_calls] %></h3>
+      <p>Successful Calls</p>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card stat-card stat-card--danger">
+      <h3><%= @stats[:failed_calls] %></h3>
+      <p>Failed Calls</p>
+    </div>
+  </div>
+</div>
+
+<!-- AI Command Interface -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="ai-command-box">
+      <h3><i class="fas fa-robot"></i> AI Command Interface</h3>
+      <p>Type or say commands like "call 9999999999" or "make a call to 8888888888"</p>
+      <div class="input-group mt-3">
+        <input type="text" id="aiCommand" class="form-control form-control-lg"
+               placeholder='Try: "call 9999999999"'>
+        <button class="btn btn-light btn-lg" onclick="executeAICommand()">
+          <i class="fas fa-paper-plane"></i> Send
+        </button>
+      </div>
+      <div id="aiCommandResult" class="mt-3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Controls -->
+<div class="row mt-4">
+  <!-- Phone Number Management -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-address-book"></i> Manage Phone Numbers</h5>
+      </div>
+      <div class="card-body">
+        <!-- Bulk Upload -->
+        <h6>Bulk Upload</h6>
+        <textarea id="bulkNumbers" class="form-control" rows="5"
+                  placeholder="Enter phone numbers (one per line or comma-separated)"></textarea>
+        <button class="btn btn-primary mt-2" onclick="uploadNumbers()">
+          <i class="fas fa-upload"></i> Upload Numbers
+        </button>
+
+        <!-- Generate Test Numbers -->
+        <hr>
+        <h6>Generate Test Numbers</h6>
+        <div class="input-group">
+          <input type="number" id="testCount" class="form-control" value="100" min="1" max="200">
+          <button class="btn btn-secondary" onclick="generateTestNumbers()">
+            <i class="fas fa-magic"></i> Generate
+          </button>
+        </div>
+        <small class="text-muted">
+          Generates 1800-XXX-XXXX numbers + 2 real test numbers
+        </small>
+
+        <!-- Phone List -->
+        <hr>
+        <h6>Phone Numbers (<%= @phone_numbers.count %>)</h6>
+        <div class="phone-list">
+          <ul class="list-group" id="phoneList">
+            <% @phone_numbers.each do |phone| %>
+              <% display_status = phone.call_attempts.positive? ? phone.status : 'pending' %>
+              <% badge_class = case display_status
+                               when 'completed' then 'success'
+                               when 'pending', 'calling' then 'warning'
+                               else 'danger'
+                               end %>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <strong><%= phone.formatted_number %></strong>
+                  <% if phone.name.present? %>
+                    <br><small class="text-muted"><%= phone.name %></small>
+                  <% end %>
+                </div>
+                <span class="badge bg-<%= badge_class %>">
+                  <%= display_status.titleize %>
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Autodialer Controls -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-play-circle"></i> Autodialer Controls</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="callDelay">Delay Between Calls (seconds):</label>
+          <input type="number" id="callDelay" class="form-control" value="10" min="5" max="60">
+        </div>
+
+        <button class="btn btn-success btn-lg w-100 mb-2" onclick="startAutodialer()">
+          <i class="fas fa-play"></i> Start Autodialer
+        </button>
+        <button class="btn btn-danger btn-lg w-100" onclick="stopAutodialer()">
+          <i class="fas fa-stop"></i> Stop Autodialer
+        </button>
+
+        <div id="autodialerStatus" class="mt-3"></div>
+
+        <!-- Recent Calls -->
+        <hr>
+        <h6>Recent Calls (<%= @recent_calls.count %>)</h6>
+        <div class="call-log">
+          <ul class="list-group" id="callLog">
+            <% @recent_calls.each do |call| %>
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <strong><%= call.phone_number.formatted_number %></strong>
+                    <br>
+                    <small class="text-muted">
+                      <%= call.created_at.strftime('%Y-%m-%d %H:%M:%S') %>
+                    </small>
+                  </div>
+                  <span class="badge bg-<%= call.status_color %>">
+                    <%= call.status_label %>
+                  </span>
+                </div>
+                <% if call.duration && call.duration > 0 %>
+                  <small class="text-muted">Duration: <%= call.duration %>s</small>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Upload bulk numbers
+  function uploadNumbers() {
+    const numbers = document.getElementById('bulkNumbers').value;
+
+    if (!numbers.trim()) {
+      alert('Please enter some phone numbers');
+      return;
+    }
+
+    fetch('/phone_numbers/bulk_upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ numbers: numbers })
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert(`Created ${data.created} phone numbers. Errors: ${data.errors.length}`);
+      location.reload();
+    })
+    .catch(error => {
+      alert('Error uploading numbers: ' + error);
+    });
+  }
+
+  // Generate test numbers
+  function generateTestNumbers() {
+    const count = document.getElementById('testCount').value;
+
+    fetch('/phone_numbers/generate_test_numbers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ count: count })
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert(`Generated ${data.created} test numbers!`);
+      location.reload();
+    })
+    .catch(error => {
+      alert('Error generating numbers: ' + error);
+    });
+  }
+
+  // Start autodialer
+  function startAutodialer() {
+    const delay = document.getElementById('callDelay').value;
+
+    if (confirm('Start autodialer? This will call all pending numbers.')) {
+      fetch('/calls/start_autodialer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ delay: delay })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('autodialerStatus').innerHTML =
+          '<div class="alert alert-success pulse">' + data.message + '</div>';
+
+        // Refresh every 5 seconds while running
+        setTimeout(() => location.reload(), 5000);
+      })
+      .catch(error => {
+        alert('Error starting autodialer: ' + error);
+      });
+    }
+  }
+
+  // Stop autodialer
+  function stopAutodialer() {
+    fetch('/calls/stop_autodialer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('autodialerStatus').innerHTML =
+        '<div class="alert alert-warning">' + data.message + '</div>';
+    });
+  }
+
+  // AI Command
+  function executeAICommand() {
+    const command = document.getElementById('aiCommand').value;
+
+    if (!command.trim()) {
+      alert('Please enter a command');
+      return;
+    }
+
+    document.getElementById('aiCommandResult').innerHTML =
+      '<div class="alert alert-info pulse">Processing command...</div>';
+
+    fetch('/calls/ai_command', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ command: command })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('aiCommandResult').innerHTML =
+          '<div class="alert alert-success"><i class="fas fa-check-circle"></i> ' + data.message + '</div>';
+
+        // Refresh after 2 seconds
+        setTimeout(() => location.reload(), 2000);
+      } else {
+        document.getElementById('aiCommandResult').innerHTML =
+          '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ' + data.error + '</div>';
+      }
+    })
+    .catch(error => {
+      document.getElementById('aiCommandResult').innerHTML =
+        '<div class="alert alert-danger">Error: ' + error + '</div>';
+    });
+  }
+
+  // Allow Enter key to submit AI command
+  document.getElementById('aiCommand').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      executeAICommand();
+    }
+  });
+</script>

@@ -1,0 +1,8 @@
+version: "2"
+authtoken: ""  # Add your ngrok authtoken here if you have one
+tunnels:
+  autodialer:
+    proto: http
+    addr: 3000
+    inspect: true
+    bind_tls: true

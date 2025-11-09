@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(ruby -e:*)",
+      "Bash(chmod:*)",
+      "Bash(ruby load_articles.rb:*)",
+      "Bash(sqlite3:*)",
+      "Bash(python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

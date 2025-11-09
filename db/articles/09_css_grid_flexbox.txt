@@ -1,0 +1,375 @@
+Title: CSS Grid vs Flexbox: When to Use Each
+Tags: CSS, Frontend, Web Design, Layout
+
+# CSS Grid vs Flexbox: When to Use Each
+
+Both CSS Grid and Flexbox are powerful layout tools, but they serve different purposes. Understanding when to use each is key to efficient web layout design.
+
+## Quick Comparison
+
+### Flexbox (1-Dimensional)
+Best for: Layout in a single direction (row OR column)
+
+### Grid (2-Dimensional)
+Best for: Complex layouts in both directions (rows AND columns)
+
+## Flexbox Fundamentals
+
+Flexbox arranges items along a single axis.
+
+### Basic Flex Container
+```css
+.container {
+  display: flex;
+  flex-direction: row; /* or column */
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+```
+
+### Flex Properties
+
+**flex-direction**: Sets main axis
+```css
+flex-direction: row | column | row-reverse | column-reverse
+```
+
+**justify-content**: Aligns along main axis
+```css
+justify-content: flex-start | flex-end | center | space-between | space-around | space-evenly
+```
+
+**align-items**: Aligns along cross axis
+```css
+align-items: stretch | flex-start | flex-end | center | baseline
+```
+
+**flex-wrap**: Allows wrapping
+```css
+flex-wrap: nowrap | wrap | wrap-reverse
+```
+
+### Flex Items
+```css
+.item {
+  flex: 1; /* Shorthand for flex-grow, flex-shrink, flex-basis */
+  flex-grow: 1; /* How much item grows */
+  flex-shrink: 1; /* How much item shrinks */
+  flex-basis: 200px; /* Base size */
+  align-self: flex-end; /* Override container alignment */
+}
+```
+
+### Common Flexbox Patterns
+
+**Centering**:
+```css
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+**Navigation Bar**:
+```css
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+```
+
+**Card Layout**:
+```css
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.card {
+  flex: 1 1 300px; /* Grow, shrink, base width */
+}
+```
+
+## CSS Grid Fundamentals
+
+Grid creates two-dimensional layouts.
+
+### Basic Grid Container
+```css
+.container {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  gap: 20px;
+}
+```
+
+### Grid Properties
+
+**grid-template-columns**: Define columns
+```css
+grid-template-columns: 200px 1fr 200px; /* Fixed, flexible, fixed */
+grid-template-columns: repeat(3, 1fr); /* Three equal columns */
+grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive */
+```
+
+**grid-template-rows**: Define rows
+```css
+grid-template-rows: 100px auto 50px;
+```
+
+**grid-template-areas**: Named areas
+```css
+grid-template-areas:
+  "header header header"
+  "sidebar content content"
+  "footer footer footer";
+```
+
+**gap**: Spacing between items
+```css
+gap: 20px; /* row and column */
+column-gap: 20px;
+row-gap: 10px;
+```
+
+### Grid Items
+```css
+.item {
+  grid-column: 1 / 3; /* Start at line 1, end at line 3 */
+  grid-row: 2 / 4;
+  grid-area: header; /* Named area */
+  justify-self: center; /* Horizontal alignment */
+  align-self: end; /* Vertical alignment */
+}
+```
+
+### Common Grid Patterns
+
+**Page Layout**:
+```css
+.layout {
+  display: grid;
+  grid-template-areas:
+    "header header header"
+    "sidebar content content"
+    "footer footer footer";
+  grid-template-columns: 200px 1fr 1fr;
+  grid-template-rows: 80px 1fr 60px;
+  min-height: 100vh;
+}
+
+.header { grid-area: header; }
+.sidebar { grid-area: sidebar; }
+.content { grid-area: content; }
+.footer { grid-area: footer; }
+```
+
+**Responsive Image Gallery**:
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+```
+
+**Dashboard Layout**:
+```css
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+
+.widget-large {
+  grid-column: span 8;
+}
+
+.widget-small {
+  grid-column: span 4;
+}
+```
+
+## When to Use Flexbox
+
+### 1. Navigation Bars
+```css
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+```
+
+### 2. Centering Content
+```css
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+```
+
+### 3. Card Components
+```css
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header { /* */ }
+.card-body { flex: 1; }
+.card-footer { /* */ }
+```
+
+### 4. Flexible Items in One Direction
+```css
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+```
+
+## When to Use Grid
+
+### 1. Full Page Layouts
+```css
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+}
+```
+
+### 2. Complex Multi-Column Layouts
+```css
+.magazine {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+}
+```
+
+### 3. Image Galleries
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+```
+
+### 4. Overlapping Elements
+```css
+.overlay {
+  display: grid;
+  grid-template-areas: "content";
+}
+
+.background { grid-area: content; z-index: 1; }
+.foreground { grid-area: content; z-index: 2; }
+```
+
+## Combining Grid and Flexbox
+
+Use both together for powerful layouts:
+
+```css
+/* Grid for page structure */
+.layout {
+  display: grid;
+  grid-template-areas:
+    "header"
+    "content"
+    "footer";
+}
+
+/* Flexbox for header content */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Grid for content cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Flexbox for card internals */
+.card {
+  display: flex;
+  flex-direction: column;
+}
+```
+
+## Responsive Design
+
+### Flexbox Responsive
+```css
+.container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.item {
+  flex: 1 1 300px; /* Wrap when below 300px */
+}
+```
+
+### Grid Responsive
+```css
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+/* Media query for fine control */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+```
+
+## Performance Considerations
+
+Both Grid and Flexbox are highly optimized by browsers. Performance differences are negligible for most use cases.
+
+### Tips:
+- Avoid deep nesting
+- Use simpler layouts when possible
+- Combine with modern CSS features like `aspect-ratio`
+- Test on various devices
+
+## Decision Matrix
+
+**Use Flexbox when:**
+- Layout is one-dimensional
+- Items should wrap naturally
+- You need simple alignment
+- Content determines layout
+
+**Use Grid when:**
+- Layout is two-dimensional
+- You need precise placement
+- You need overlapping elements
+- You have complex layout requirements
+
+## Conclusion
+
+Flexbox and Grid complement each other. Flexbox excels at one-dimensional layouts and component-level design, while Grid shines in two-dimensional layouts and page-level structure. Master both, and you'll be equipped to handle any layout challenge. Remember: it's not Grid vs Flexbox—it's Grid AND Flexbox working together to create beautiful, responsive web layouts.

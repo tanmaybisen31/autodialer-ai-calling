@@ -1,0 +1,273 @@
+<div class="row">
+  <div class="col-12">
+    <div class="mb-4">
+      <a href="<%= blogs_path %>" class="text-decoration-none">
+        <i class="fas fa-arrow-left"></i> Back to Blog
+      </a>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">
+        <h1 class="mb-0">
+          <i class="fas fa-robot"></i> RAG-Powered Q&A System
+        </h1>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-4">
+          Ask questions about the programming articles! Select specific articles or choose "All Articles" to search across all content.
+          The system uses RAG (Retrieval Augmented Generation) with cosine similarity to find relevant information and generate accurate answers.
+        </p>
+
+        <div class="alert" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: var(--color-text);">
+          <h5><i class="fas fa-info-circle"></i> How it works:</h5>
+          <ol class="mb-0">
+            <li><strong>Chunking</strong>: Articles are split into 1000-character chunks with 200-character overlap</li>
+            <li><strong>Embedding</strong>: Your question and chunks are converted to 768-dimensional vectors</li>
+            <li><strong>Retrieval</strong>: Top 5 most similar chunks are found using cosine similarity</li>
+            <li><strong>Generation</strong>: AI generates an answer based on retrieved context</li>
+          </ol>
+        </div>
+
+        <!-- Article Selection -->
+        <div class="mb-4">
+          <label class="form-label"><strong>Select Articles to Search:</strong></label>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="select-all" checked>
+              <label class="form-check-label" for="select-all">
+                <strong>All Articles</strong> (Search across all 10 articles)
+              </label>
+            </div>
+          </div>
+
+          <div id="article-checkboxes" class="border rounded p-3" style="background: rgba(15, 23, 42, 0.75); max-height: 300px; overflow-y: auto;">
+            <% @blogs.each do |blog| %>
+              <div class="form-check mb-2">
+                <input class="form-check-input article-checkbox" type="checkbox" value="<%= blog.id %>" id="blog-<%= blog.id %>" checked>
+                <label class="form-check-label" for="blog-<%= blog.id %>">
+                  <%= blog.title %>
+                  <% if blog.tags.present? %>
+                    <small class="text-muted">(Tags: <%= blog.tags %>)</small>
+                  <% end %>
+                </label>
+              </div>
+            <% end %>
+          </div>
+          <small class="form-text text-muted mt-2">
+            Selected: <span id="selected-count"><%= @blogs.count %></span> article(s)
+          </small>
+        </div>
+
+        <!-- Question Input -->
+        <div class="mb-4">
+          <label class="form-label"><strong>Ask Your Question:</strong></label>
+          <textarea
+            id="question-input"
+            class="form-control"
+            rows="3"
+            placeholder="Example questions:
+- What is REST and how does it work?
+- Explain React Hooks with examples
+- How do I optimize database queries?
+- What's the difference between Docker and virtual machines?
+- How does async/await work in JavaScript?"
+            style="font-family: 'Inter', sans-serif;"></textarea>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-grid">
+          <button id="ask-button" class="btn btn-primary btn-lg" onclick="askQuestion()">
+            <i class="fas fa-search"></i> Ask Question
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Answer Section (Hidden until answer is generated) -->
+    <div id="answer-section" class="card" style="display: none;">
+      <div class="card-header">
+        <h3 class="mb-0">
+          <i class="fas fa-comment-dots"></i> Answer
+        </h3>
+      </div>
+      <div class="card-body">
+        <div id="answer-content" class="mb-4" style="line-height: 1.8; font-size: 1.05rem;"></div>
+
+        <hr>
+
+        <h4 class="mb-3">
+          <i class="fas fa-book-open"></i> Sources
+          <small class="text-muted">(Retrieved chunks with similarity scores)</small>
+        </h4>
+        <div id="sources-list"></div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="card" style="display: none;">
+      <div class="card-body text-center py-5">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4>Processing your question...</h4>
+        <p class="text-muted mb-0">
+          Retrieving relevant chunks and generating answer using RAG...
+        </p>
+      </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error-section" class="alert alert-danger" style="display: none;">
+      <h5><i class="fas fa-exclamation-triangle"></i> Error</h5>
+      <p id="error-message" class="mb-0"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Handle "Select All" checkbox
+  document.getElementById('select-all').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.article-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    updateSelectedCount();
+  });
+
+  // Handle individual checkboxes
+  document.querySelectorAll('.article-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      updateSelectedCount();
+      const allCheckboxes = document.querySelectorAll('.article-checkbox');
+      const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+      document.getElementById('select-all').checked = allChecked;
+    });
+  });
+
+  function updateSelectedCount() {
+    const count = document.querySelectorAll('.article-checkbox:checked').length;
+    document.getElementById('selected-count').textContent = count;
+  }
+
+  async function askQuestion() {
+    const question = document.getElementById('question-input').value.trim();
+
+    if (!question) {
+      alert('Please enter a question');
+      return;
+    }
+
+    const selectedBlogIds = Array.from(document.querySelectorAll('.article-checkbox:checked'))
+      .map(cb => cb.value);
+
+    if (selectedBlogIds.length === 0) {
+      alert('Please select at least one article');
+      return;
+    }
+
+    // Show loading, hide answer and error
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('answer-section').style.display = 'none';
+    document.getElementById('error-section').style.display = 'none';
+    document.getElementById('ask-button').disabled = true;
+
+    try {
+      const response = await fetch('<%= answer_blogs_path %>', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+          question: question,
+          blog_ids: selectedBlogIds
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Display answer
+        document.getElementById('answer-content').innerHTML = formatAnswer(data.answer);
+
+        // Display sources
+        const sourcesList = document.getElementById('sources-list');
+        sourcesList.innerHTML = data.sources.map((source, index) => `
+          <div class="card mb-3" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(148, 163, 184, 0.18);">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="mb-0" style="color: var(--color-primary);">
+                  <i class="fas fa-file-alt"></i> Source ${index + 1}: ${escapeHtml(source.article_title)}
+                </h5>
+                <span class="badge bg-success">
+                  ${(source.similarity * 100).toFixed(1)}% match
+                </span>
+              </div>
+              <p class="mb-0" style="color: var(--color-muted); font-size: 0.9rem;">
+                ${escapeHtml(source.excerpt)}
+              </p>
+              <a href="/blogs/${source.article_id}" class="btn btn-sm btn-primary mt-2">
+                View Full Article <i class="fas fa-arrow-right"></i>
+              </a>
+            </div>
+          </div>
+        `).join('');
+
+        document.getElementById('answer-section').style.display = 'block';
+      } else {
+        // Show error
+        document.getElementById('error-message').textContent = data.error || 'Unknown error occurred';
+        document.getElementById('error-section').style.display = 'block';
+      }
+    } catch (error) {
+      document.getElementById('error-message').textContent = 'Failed to connect to server: ' + error.message;
+      document.getElementById('error-section').style.display = 'block';
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('ask-button').disabled = false;
+    }
+  }
+
+  function formatAnswer(answer) {
+    // Simple markdown-like formatting
+    return answer
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code style="background: rgba(56, 189, 248, 0.15); padding: 0.2rem 0.4rem; border-radius: 4px;">$1</code>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^(.+)$/gm, '<p>$&</p>')
+      .replace(/<p><\/p>/g, '');
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Allow Enter key to submit (with Shift+Enter for new line)
+  document.getElementById('question-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      askQuestion();
+    }
+  });
+</script>
+
+<style>
+    width: 8px;
+  }
+
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 10px;
+  }
+
+    background: rgba(56, 189, 248, 0.35);
+    border-radius: 10px;
+  }
+
+    background: rgba(56, 189, 248, 0.5);
+  }
+
+  code {
+    font-family: 'Courier New', monospace;
+  }
+</style>

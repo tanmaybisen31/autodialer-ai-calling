@@ -1,0 +1,99 @@
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="fas fa-blog"></i> Programming Blog</h1>
+      <div>
+        <a href="<%= generate_blogs_path %>" class="btn btn-success me-2">
+          <i class="fas fa-magic"></i> Generate Content
+        </a>
+        <a href="<%= search_blogs_path %>" class="btn btn-info me-2">
+          <i class="fas fa-search"></i> Semantic Search
+        </a>
+        <a href="<%= ask_blogs_path %>" class="btn btn-primary">
+          <i class="fas fa-robot"></i> Ask Questions (RAG Q&A)
+        </a>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <%= form_with url: search_blogs_path, method: :get, local: true, class: 'd-flex gap-2' do |f| %>
+          <%= f.text_field :q,
+              class: 'form-control',
+              placeholder: 'Search articles using AI... (e.g., "async programming patterns")',
+              style: 'flex: 1;' %>
+          <%= f.submit 'Search with RAG', class: 'btn btn-primary' %>
+        <% end %>
+        <small class="text-muted mt-2 d-block">
+          <i class="fas fa-info-circle"></i> Powered by AI embeddings and cosine similarity
+        </small>
+      </div>
+    </div>
+
+    <% if @blogs.empty? %>
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-file-alt fa-4x mb-3" style="color: var(--color-muted);"></i>
+          <h3>No articles loaded yet</h3>
+          <p class="text-muted">Run the seed command to load 10 programming articles:</p>
+          <div class="alert" style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--color-border); color: var(--color-text); max-width: 600px; margin: 20px auto;">
+            <code style="color: var(--color-primary); font-size: 1rem;">rails db:seed</code>
+          </div>
+          <p class="text-muted">
+            This will load 10 pre-written articles from <code>db/articles/</code>
+            <br>
+            Then you can use RAG Q&A to ask questions about them!
+          </p>
+        </div>
+      </div>
+    <% else %>
+      <div class="row">
+        <% @blogs.each do |blog| %>
+          <div class="col-12 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h3 class="card-title">
+                  <a href="<%= blog_path(blog) %>" style="color: var(--color-primary);">
+                    <%= blog.title %>
+                  </a>
+                </h3>
+
+                <div class="mb-3">
+                  <small class="text-muted">
+                    <i class="fas fa-calendar"></i>
+                    <%= blog.published_at.strftime('%B %d, %Y') %>
+                  </small>
+                </div>
+
+                <% if blog.tags.present? %>
+                  <div class="mb-3">
+                    <% blog.tags_array.each do |tag| %>
+                      <span class="badge bg-info me-1">
+                        <%= tag %>
+                      </span>
+                    <% end %>
+                  </div>
+                <% end %>
+
+                <div class="article-preview">
+                  <%= truncate(strip_tags(blog.content), length: 300) %>
+                </div>
+
+                <a href="<%= blog_path(blog) %>" class="btn btn-primary btn-sm mt-3">
+                  Read More <i class="fas fa-arrow-right"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .article-preview {
+    line-height: 1.8;
+    color: var(--color-text);
+  }
+</style>
