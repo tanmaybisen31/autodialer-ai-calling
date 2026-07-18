@@ -11,10 +11,10 @@ The core of the project is an **autodialer**: it works through a list of stored 
 
 The calling flow is:
 
-1. **Dial** — `AutodialerService` selects all `pending` phone numbers and, for each one, `TwilioService` places an outbound call via the Twilio REST API. The dialing loop runs in the background through a Sidekiq job (`AutodialerJob`).
-2. **Speak** — when the callee answers, Twilio requests the `/twilio/voice` webhook. That endpoint asks Google Gemini (`gemini-2.0-flash`) to generate a short greeting/script, and returns TwiML that speaks it using Twilio's built-in TTS (the `Polly.Aditi` voice, configured for Hindi).
-3. **Listen & respond** — the TwiML uses Twilio `<Gather>` to capture the callee's speech or keypad input. That input is posted to `/twilio/gather`, which sends it back to Gemini for a conversational reply, speaks the reply, and then ends the call.
-4. **Track** — Twilio posts call lifecycle events to `/twilio/status`, which updates the matching `Call` record (answered, busy, failed, no-answer, duration, etc.).
+1. **Dial:** `AutodialerService` selects all `pending` phone numbers and, for each one, `TwilioService` places an outbound call via the Twilio REST API. The dialing loop runs in the background through a Sidekiq job (`AutodialerJob`).
+2. **Speak:** when the callee answers, Twilio requests the `/twilio/voice` webhook. That endpoint asks Google Gemini (`gemini-2.0-flash`) to generate a short greeting/script, and returns TwiML that speaks it using Twilio's built-in TTS (the `Polly.Aditi` voice, configured for Hindi).
+3. **Listen & respond:** the TwiML uses Twilio `<Gather>` to capture the callee's speech or keypad input. That input is posted to `/twilio/gather`, which sends it back to Gemini for a conversational reply, speaks the reply, and then ends the call.
+4. **Track:** Twilio posts call lifecycle events to `/twilio/status`, which updates the matching `Call` record (answered, busy, failed, no-answer, duration, etc.).
 
 There is also an **AI command endpoint** (`POST /calls/ai_command`): it takes free-text like `"call 8888888888"`, extracts the number (regex-based parsing first, with a Gemini fallback), and triggers a single call.
 
@@ -57,7 +57,7 @@ Run `./check-prerequisites.sh` to verify the local tooling.
 
    - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
    - `GEMINI_API_KEY`
-   - `OPENAI_API_KEY` (optional — blog generation only)
+   - `OPENAI_API_KEY` (optional, blog generation only)
    - `NGROK_URL` (your public HTTPS tunnel URL for dev webhooks)
 
 2. **Install dependencies and prepare the database**
